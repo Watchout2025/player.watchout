@@ -30,16 +30,16 @@
             background-color: black;
         }
 
-        /* Overlay class for showing the interactive state */
-        .overlay-active {
+        /* Overlay class for showing the controls (bottom overlay) */
+        .controls-visible {
             opacity: 1;
-            pointer-events: auto; /* Allows clicks on the overlay and button */
+            pointer-events: auto; /* Allows interaction with the controls bar */
         }
 
-        /* Overlay class for hiding the interactive state */
-        .overlay-inactive {
+        /* Overlay class for hiding the controls (bottom overlay) */
+        .controls-hidden {
             opacity: 0;
-            pointer-events: none; /* Prevents clicks from reaching the video/overlay, allowing video to play uninterrupted */
+            pointer-events: none; /* Allows clicks to pass through to video/top overlay */
         }
         
         /* Custom styling for the seek thumb appearance on hover */
@@ -55,11 +55,15 @@
         <!-- The Video Element. Note: 'controls' attribute is removed to use custom controls -->
         <video id="video" muted autoplay class="w-full h-full object-contain"></video>
 
-        <!-- Full-Screen Overlay, used for custom controls and click blocking -->
-        <div id="video-overlay" class="absolute inset-0 bg-black/30 flex flex-col justify-end transition-all duration-500 overlay-active">
+        <!-- 1. TOP OVERLAY: Full-screen, transparent layer for handling the main Play/Pause click -->
+        <div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
 
-            <!-- Controls Bar Container -->
-            <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3">
+        <!-- 2. BOTTOM OVERLAY: Contains the controls bar and manages its visibility. -->
+        <div id="bottom-overlay" 
+             class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
+            
+            <!-- Controls Bar Container (The visible controls) -->
+            <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3 pointer-events-auto">
                 
                 <!-- 1. TOP ROW: Timeline Row (Seek Bar + Remaining Time Display) -->
                 <div id="timeline-row" class="flex items-center space-x-4 w-full"> 
@@ -74,7 +78,6 @@
                     </div>
 
                     <!-- Remaining Time Display (Right of Seek Bar) - Fixed width to prevent layout shift -->
-                    <!-- w-12 is used to accommodate the minus sign and prevent jitter -->
                     <div class="flex items-center space-x-1 flex-shrink-0">
                         <span id="remaining-time" class="text-white text-sm font-medium select-none w-12 text-center">-0:00</span>
                     </div>
@@ -95,7 +98,7 @@
                             </svg>
                         </button>
 
-                        <!-- Play/Pause Button -->
+                        <!-- Play/Pause Button (Remains for aesthetic but click logic is on top-overlay) -->
                         <button id="custom-play-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
@@ -129,7 +132,7 @@
                             <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
                         </svg>
 
-                        <!-- Fullscreen Exit Icon (Hidden by default) - UPDATED ICON -->
+                        <!-- Fullscreen Exit Icon (Hidden by default) -->
                         <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
                             <path fill="currentColor" fill-rule="evenodd" d="M24 8h-5V3h-2v7h7zM0 16h5v5h2v-7H0zm7-6H0V8h5V3h2zm12 11v-5h5v-2h-7v7z" clip-rule="evenodd"/>
                         </svg>
@@ -137,13 +140,12 @@
                 </div>
 
             </div>
-
         </div>
 
     </div>
 
     <!-- Error message positioned absolutely in the top-left corner, only visible on error -->
-    <div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-10">
+    <div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30">
         <!-- Error messages will be displayed here -->
     </div>
 
@@ -151,7 +153,11 @@
         const video = document.getElementById('video');
         const videoContainer = document.getElementById('video-container'); // Container for fullscreen
         const errorMessageDiv = document.getElementById('error-message');
-        const videoOverlay = document.getElementById('video-overlay');
+        
+        // NEW DOM Elements
+        const topOverlay = document.getElementById('top-overlay'); // For Play/Pause click and inactivity
+        const bottomOverlay = document.getElementById('bottom-overlay'); // For controls visibility
+        
         const customPlayButton = document.getElementById('custom-play-button');
         const playIcon = document.getElementById('play-icon');
         const pauseIcon = document.getElementById('pause-icon');
@@ -225,16 +231,16 @@
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
 
-        // --- Overlay & Button Visibility Control ---
+        // --- Overlay & Button Visibility Control (Controls Bottom Overlay) ---
 
-        function showOverlay() {
-            videoOverlay.classList.remove('overlay-inactive');
-            videoOverlay.classList.add('overlay-active');
+        function showControls() {
+            bottomOverlay.classList.remove('controls-hidden');
+            bottomOverlay.classList.add('controls-visible');
         }
 
-        function hideOverlay() {
-            videoOverlay.classList.remove('overlay-active');
-            videoOverlay.classList.add('overlay-inactive');
+        function hideControls() {
+            bottomOverlay.classList.remove('controls-visible');
+            bottomOverlay.classList.add('controls-hidden');
         }
         
         function togglePlayPauseIcon(isPaused) {
@@ -247,14 +253,14 @@
             }
         }
 
-        /** Resets the inactivity timer to hide the overlay after 3 seconds */
+        /** Resets the inactivity timer to hide the controls overlay after 3 seconds */
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
-            showOverlay(); // Always show the overlay on any mouse/touch activity
+            showControls(); // Always show the controls on any mouse/touch activity
             
             if (!video.paused && !isSeeking) {
                 // If the video is playing and not actively seeking, start the timer
-                inactivityTimer = setTimeout(hideOverlay, INACTIVITY_TIMEOUT);
+                inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
 
@@ -296,8 +302,8 @@
         function startSeeking(event) {
             if (!video.duration || video.duration === Infinity) return;
             isSeeking = true;
-            // Show the overlay and thumb immediately
-            showOverlay(); 
+            // Show the controls and thumb immediately
+            showControls(); 
             seekThumb.classList.add('scale-100');
             
             // Start listening for drag movement
@@ -354,28 +360,24 @@
             }
         }
 
-        // --- Skip Backward Logic ---
+        // --- Skip Backward/Forward Logic ---
 
         function handleSkipBackward() {
-            // Jump back 10 seconds, but ensure currentTime is not less than 0
             video.currentTime = Math.max(0, video.currentTime - 10);
-            resetInactivityTimer(); // Show controls temporarily after interaction
+            resetInactivityTimer(); 
         }
-
-        // --- Skip Forward Logic ---
 
         function handleSkipForward() {
-            // Jump forward 10 seconds, but ensure currentTime is not greater than duration
             video.currentTime = Math.min(video.duration, video.currentTime + 10);
-            resetInactivityTimer(); // Show controls temporarily after interaction
+            resetInactivityTimer();
         }
 
+        // --- Play/Pause Logic (Now attached to top overlay) ---
 
-        // --- Event Handlers ---
-
-        function handlePlayButtonClick() {
+        function handlePlayPauseToggle() {
             if (video.paused || video.ended) {
                 video.play().catch(e => {
+                    // Display error if autoplay fails
                     displayError("Play failed. User interaction may be required. Error: " + e.message);
                 });
             } else {
@@ -383,52 +385,57 @@
             }
         }
 
+        // --- Event Handlers Setup ---
+
         function setupInactivityDetection() {
             const container = document.getElementById('video-container');
 
-            // Listen for mouse/touch activity on the container (for hiding/showing overlay)
+            // 1. Inactivity/Controls Visibility: Listen for mouse/touch activity on the container 
             ['mousemove', 'mousedown', 'touchstart'].forEach(event => {
                 container.addEventListener(event, resetInactivityTimer);
             });
 
-            // Handle controls
-            customPlayButton.addEventListener('click', handlePlayButtonClick);
-            fullscreenButton.addEventListener('click', toggleFullscreen); // Add fullscreen listener
+            // 2. Play/Pause Toggle: Listen on the NEW top-overlay
+            topOverlay.addEventListener('click', handlePlayPauseToggle);
+            
+            // 3. Controls Bar Button Handlers
+            customPlayButton.addEventListener('click', handlePlayPauseToggle); // The visual button still toggles
+            fullscreenButton.addEventListener('click', toggleFullscreen); 
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
             
-            // Progress Bar Seeking Events
+            // 4. Progress Bar Seeking Events
             seekBar.addEventListener('mousedown', startSeeking);
-            seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); // Use passive for touchstart
+            seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
 
-            // Listen for browser's fullscreen change event
+            // 5. System Listeners
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
-            // Video state listeners
+            // 6. Video state listeners
             video.addEventListener('timeupdate', updateProgress);
             video.addEventListener('loadedmetadata', updateProgress);
 
             video.addEventListener('pause', () => {
-                showOverlay(); 
+                showControls(); // Keep controls visible when paused
                 togglePlayPauseIcon(true);
                 clearTimeout(inactivityTimer); 
             });
 
             video.addEventListener('play', () => {
                 togglePlayPauseIcon(false);
-                resetInactivityTimer();
+                resetInactivityTimer(); // Start timer to hide controls
             });
             
             video.addEventListener('ended', () => {
-                showOverlay();
+                showControls();
                 togglePlayPauseIcon(true);
             });
 
             // Initial state setup
             updateProgress();
-            updateFullscreenIcon(); // Initial icon state
+            updateFullscreenIcon(); 
             if (video.paused || video.ended) {
-                showOverlay();
+                showControls();
                 togglePlayPauseIcon(true);
             } else {
                 togglePlayPauseIcon(false);
