@@ -84,10 +84,10 @@
                 </div>
 
 
-                <!-- 2. BOTTOM ROW: Back 10s, Play/Pause, Forward 10s (Left) and Fullscreen Button (Right) -->
+                <!-- 2. BOTTOM ROW: Controls Group (Left) and Fullscreen Button (Right) -->
                 <div id="bottom-controls-row" class="flex items-center justify-between">
                     
-                    <!-- LEFT GROUP: Back 10s, Play/Pause, and Forward 10s Buttons -->
+                    <!-- LEFT GROUP: Back 10s, Play/Pause, Forward 10s, and Mute/Unmute Buttons -->
                     <div class="flex items-center space-x-2">
                         <!-- Back 10s Button -->
                         <button id="skip-backward-button" 
@@ -98,7 +98,7 @@
                             </svg>
                         </button>
 
-                        <!-- Play/Pause Button (Remains for aesthetic but click logic is on top-overlay) -->
+                        <!-- Play/Pause Button -->
                         <button id="custom-play-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
@@ -119,6 +119,21 @@
                             <!-- Forward 10s Icon -->
                             <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Forward10Medium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6M8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+
+                        <!-- MUTE/UNMUTE Button -->
+                        <button id="mute-button" 
+                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                            
+                            <!-- Volume ON Icon (Visible when UNMUTED) -->
+                            <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
+                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
+                            </svg>
+                            
+                            <!-- Volume OFF Icon (Visible when MUTED) -->
+                            <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
+                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
                             </svg>
                         </button>
                     </div>
@@ -158,10 +173,16 @@
         const topOverlay = document.getElementById('top-overlay'); // For Play/Pause click and inactivity
         const bottomOverlay = document.getElementById('bottom-overlay'); // For controls visibility
         
+        // Play/Pause Elements
         const customPlayButton = document.getElementById('custom-play-button');
         const playIcon = document.getElementById('play-icon');
         const pauseIcon = document.getElementById('pause-icon');
         
+        // Mute/Volume Elements (NEW)
+        const muteButton = document.getElementById('mute-button');
+        const volumeOnIcon = document.getElementById('volume-on-icon');
+        const volumeOffIcon = document.getElementById('volume-off-icon');
+
         // Elements for progress bar and time display
         const seekBar = document.getElementById('seek-bar');
         const progressIndicator = document.getElementById('progress-indicator');
@@ -250,6 +271,17 @@
             } else {
                 playIcon.classList.add('hidden');
                 pauseIcon.classList.remove('hidden');
+            }
+        }
+
+        /** Updates the Mute/Unmute icon based on video state (NEW) */
+        function updateMuteIcon() {
+            if (video.muted) {
+                volumeOnIcon.classList.add('hidden');
+                volumeOffIcon.classList.remove('hidden');
+            } else {
+                volumeOnIcon.classList.remove('hidden');
+                volumeOffIcon.classList.add('hidden');
             }
         }
 
@@ -372,7 +404,7 @@
             resetInactivityTimer();
         }
 
-        // --- Play/Pause Logic (Now attached to top overlay) ---
+        // --- Play/Pause Logic (Attached to top overlay) ---
 
         function handlePlayPauseToggle() {
             if (video.paused || video.ended) {
@@ -384,6 +416,14 @@
                 video.pause();
             }
         }
+        
+        // --- Mute/Unmute Logic (NEW) ---
+        function toggleMute() {
+            video.muted = !video.muted;
+            updateMuteIcon();
+            resetInactivityTimer();
+        }
+
 
         // --- Event Handlers Setup ---
 
@@ -403,6 +443,7 @@
             fullscreenButton.addEventListener('click', toggleFullscreen); 
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
+            muteButton.addEventListener('click', toggleMute); // NEW Mute/Unmute handler
             
             // 4. Progress Bar Seeking Events
             seekBar.addEventListener('mousedown', startSeeking);
@@ -434,6 +475,7 @@
             // Initial state setup
             updateProgress();
             updateFullscreenIcon(); 
+            updateMuteIcon(); // Set initial mute icon
             if (video.paused || video.ended) {
                 showControls();
                 togglePlayPauseIcon(true);
@@ -449,7 +491,16 @@
         function initHlsPlayer(url) {
             if (Hls.isSupported()) {
                 console.log('HLS.js is supported. Initializing player.');
-                const hls = new Hls();
+                
+                // Added configuration for better resilience against buffering errors
+                const hlsConfig = {
+                    // Limit buffer length to 10 seconds to respond faster to network changes
+                    maxBufferLength: 10, 
+                    // Automatically drop to the lowest quality level on stall to ensure continuous playback
+                    capLevelOnStall: true,
+                };
+
+                const hls = new Hls(hlsConfig);
 
                 hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                     hls.loadSource(url);
