@@ -1,13 +1,11 @@
-<!DOCTYPE TML>
+<!DOCTYPE HTML>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Functional HLS Player with Dynamic Tracks</title>
-    <!-- Load Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load hls.js library -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
+    <!-- Load Tailwind CSS for styling --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load hls.js library --><script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
     <style>
         /* Define Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -55,151 +53,128 @@
 </head>
 <body>
 
-    <!-- Video Container -->
-    <div id="video-container" class="relative">
-        <!-- The Video Element. -->
-        <video id="video" muted autoplay class="w-full h-full object-contain"></video>
+    <!-- Video Container --><div id="video-container" class="relative">
+        <!-- The Video Element. Removed 'muted' and 'autoplay' --><video id="video" class="w-full h-full object-contain"></video>
 
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
+        <!-- Loading Indicator --><div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
             <img src="https://i.giphy.com/FgH5xSNjGHZsiYPWAX.webp" class="w-20 h-20 rounded-full shadow-lg" alt="Loading indicator">
         </div>
 
-        <!-- 1. TOP OVERLAY: Full-screen, transparent layer for handling the main Play/Pause click -->
-        <div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
+        <!-- 1. TOP OVERLAY: Full-screen, transparent layer for handling the main Play/Pause click --><!-- This now only serves to trigger general controls visibility and central play/pause when needed --><div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
 
-        <!-- 2. BOTTOM OVERLAY: Contains the controls bar and manages its visibility. -->
-        <div id="bottom-overlay" 
+        <!-- NEW: Center Play/Pause Overlay --><div id="center-play-pause-overlay" 
+             class="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
+            <button id="center-play-pause-button" 
+                    class="text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-all duration-200 focus:outline-none">
+                <!-- Play Icon (Larger version) --><svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" aria-hidden="true" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+                </svg>
+                <!-- Pause Icon (Larger version, hidden initially) --><svg id="center-pause-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" aria-hidden="true" class="hidden" viewBox="0 0 24 24">
+                    <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+
+
+        <!-- 2. BOTTOM OVERLAY: Contains the controls bar and manages its visibility. --><div id="bottom-overlay" 
              class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
             
-            <!-- Controls Bar Container (The visible controls) -->
-            <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3 pointer-events-auto">
+            <!-- Controls Bar Container (The visible controls) --><div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3 pointer-events-auto">
                 
-                <!-- 1. TOP ROW: Timeline Row (Seek Bar + Remaining Time Display) -->
-                <div id="timeline-row" class="flex items-center space-x-4 w-full"> 
+                <!-- 1. TOP ROW: Timeline Row (Seek Bar + Remaining Time Display) --><div id="timeline-row" class="flex items-center space-x-4 w-full"> 
                     
-                    <!-- Seek Bar (Interactive) - Takes up the flexible space -->
-                    <div id="seek-bar" class="relative flex-grow h-1.5 bg-white/30 rounded-full cursor-pointer group">
+                    <!-- Seek Bar (Interactive) - Takes up the flexible space --><div id="seek-bar" class="relative flex-grow h-1.5 bg-white/30 rounded-full cursor-pointer group">
                         
-                        <!-- Buffer Indicator (Light Gray/White) -->
-                        <div id="buffer-indicator" class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100" style="width: 0%;"></div>
+                        <!-- Buffer Indicator (Light Gray/White) --><div id="buffer-indicator" class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100" style="width: 0%;"></div>
 
-                        <!-- Progress Indicator (Red) -->
-                        <div id="progress-indicator" class="absolute inset-y-0 left-0 bg-red-600 rounded-full transition-all duration-100" style="width: 0%;"></div>
+                        <!-- Progress Indicator (Red) --><div id="progress-indicator" class="absolute inset-y-0 left-0 bg-red-600 rounded-full transition-all duration-100" style="width: 0%;"></div>
                         
-                        <!-- Seek Thumb (Red) -->
-                        <div id="seek-thumb" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100" style="left: 0%;"></div>
+                        <!-- Seek Thumb (Red) --><div id="seek-thumb" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100" style="left: 0%;"></div>
                     </div>
 
-                    <!-- Remaining Time Display (Right of Seek Bar) - Fixed width to prevent layout shift -->
-                    <div class="flex items-center space-x-1 flex-shrink-0">
+                    <!-- Remaining Time Display (Right of Seek Bar) - Fixed width to prevent layout shift --><div class="flex items-center space-x-1 flex-shrink-0">
                         <span id="remaining-time" class="text-white text-sm font-medium select-none w-12 text-center">-0:00</span>
                     </div>
                 </div>
 
 
-                <!-- 2. BOTTOM ROW: Controls Group (Left) and Fullscreen Button (Right) -->
-                <div id="bottom-controls-row" class="flex items-center justify-between">
+                <!-- 2. BOTTOM ROW: Controls Group (Left) and Fullscreen Button (Right) --><div id="bottom-controls-row" class="flex items-center justify-between">
                     
-                    <!-- LEFT GROUP: Back 10s, Play/Pause, Forward 10s, and Mute/Unmute Buttons -->
-                    <div class="flex items-center space-x-2">
-                        <!-- Back 10s Button -->
-                        <button id="skip-backward-button" 
+                    <!-- LEFT GROUP: Back 10s, Play/Pause, Forward 10s, and Mute/Unmute Buttons --><div class="flex items-center space-x-2">
+                        <!-- Back 10s Button --><button id="skip-backward-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
-                            <!-- Back 10s Icon (SVG for 10s back) -->
-                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Back10Medium">
+                            <!-- Back 10s Icon (SVG for 10s back) --><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Back10Medium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/>
                             </svg>
                         </button>
 
-                        <!-- Play/Pause Button -->
-                        <button id="custom-play-button" 
+                        <!-- Play/Pause Button (Bottom Bar) --><button id="custom-play-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
-                            <!-- Play Icon (Visible when paused) -->
-                            <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24">
+                            <!-- Play Icon (Visible when paused) --><svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
                             </svg>
 
-                            <!-- Pause Icon (Visible when playing) -->
-                            <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+                            <!-- Pause Icon (Visible when playing) --><svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
                                 <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
                             </svg>
                         </button>
                         
-                        <!-- Forward 10s Button -->
-                        <button id="skip-forward-button" 
+                        <!-- Forward 10s Button --><button id="skip-forward-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
-                            <!-- Forward 10s Icon (SVG for 10s forward) -->
-                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Forward10Medium">
+                            <!-- Forward 10s Icon (SVG for 10s forward) --><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Forward10Medium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
                             </svg>
                         </button>
 
-                        <!-- MUTE/UNMUTE Button & Volume Slider Wrapper -->
-                        <div id="volume-control-wrapper" class="relative flex items-center h-12">
-                            <!-- Volume Slider Container (Hidden by default, shows on hover) -->
-                            <div id="volume-slider-container" class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
-                                <!-- Vertical Slider Track -->
-                                <div id="volume-slider-track" class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
-                                    <!-- Volume Level Indicator (Red) -->
-                                    <div id="volume-level" class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full" style="height: 100%;"></div>
-                                    <!-- Volume Thumb (Red) -->
-                                    <div id="volume-thumb-control" class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100" style="bottom: 0;"></div>
+                        <!-- MUTE/UNMUTE Button & Volume Slider Wrapper --><div id="volume-control-wrapper" class="relative flex items-center h-12">
+                            <!-- Volume Slider Container (Hidden by default, shows on hover) --><div id="volume-slider-container" class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
+                                <!-- Vertical Slider Track --><div id="volume-slider-track" class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
+                                    <!-- Volume Level Indicator (Red) --><div id="volume-level" class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full" style="height: 100%;"></div>
+                                    <!-- Volume Thumb (Red) --><div id="volume-thumb-control" class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100" style="bottom: 0;"></div>
                                 </div>
                             </div>
 
-                            <!-- MUTE/UNMUTE Button -->
-                            <button id="mute-button" 
+                            <!-- MUTE/UNMUTE Button --><button id="mute-button" 
                                     class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
                                 
-                                <!-- Volume ON Icon (Visible when UNMUTED) -->
-                                <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
+                                <!-- Volume ON Icon (Visible when UNMUTED) --><svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
                                     <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
                                 </svg>
                                 
-                                <!-- Volume OFF Icon (Visible when MUTED) -->
-                                <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
+                                <!-- Volume OFF Icon (Visible when MUTED) --><svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
                                     <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
-                                </svg>
+                            </svg>
                             </button>
                         </div>
                     </div>
                     
-                    <!-- RIGHT SIDE: Audio/Subtitle Button and Fullscreen Button -->
-                    <div class="flex items-center space-x-2 relative">
+                    <!-- RIGHT SIDE: Audio/Subtitle Button and Fullscreen Button --><div class="flex items-center space-x-2 relative">
 
-                        <!-- Audio & Subtitle Button and Menu Wrapper (Hover Trigger) -->
-                        <div class="relative" id="audio-subtitle-wrapper">
-                            <!-- NOTE: The click handler will be added via JavaScript -->
-                            <button id="audio-subtitle-toggle" 
+                        <!-- Audio & Subtitle Button and Menu Wrapper (Hover Trigger) --><div class="relative" id="audio-subtitle-wrapper">
+                            <!-- NOTE: The click handler will be added via JavaScript --><button id="audio-subtitle-toggle" 
                                     class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                                     title="Audio & Subtitles">
-                                <!-- Subtitles Icon -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" aria-hidden="true" data-icon="SubtitlesMedium" viewBox="0 0 24 24">
+                                <!-- Subtitles Icon --><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" aria-hidden="true" data-icon="SubtitlesMedium" viewBox="0 0 24 24">
                                     <path fill="currentColor" fill-rule="evenodd" d="M1 3a1 1 0 0 1 1-1h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3a1 1 0 0 1-1.55.83L11.7 18H2a1 1 0 0 1-1-1zm2 1v12h9.3l.25.17L17 19.13V16h4V4zm7 5H5V7h5zm9 2h-5v2h5zm-7 2H5v-2h7zm7-6h-7v2h7z" clip-rule="evenodd"/>
                                 </svg>
                             </button>
                             
-                            <!-- Menu Popover (Dynamic Content) - Side-by-Side Layout -->
-                            <div id="audio-subtitle-menu" 
+                            <!-- Menu Popover (Dynamic Content) - Side-by-Side Layout --><div id="audio-subtitle-menu" 
                                  class="absolute bottom-14 right-0 w-[450px] bg-black/80 rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200">
                                 
                                 <div class="flex gap-4">
-                                    <!-- Audio Tracks Container (Left Column) -->
-                                    <div id="audio-tracks-container" class="flex-1 max-h-64 overflow-y-auto pr-2">
+                                    <!-- Audio Tracks Container (Left Column) --><div id="audio-tracks-container" class="flex-1 max-h-64 overflow-y-auto pr-2">
                                         <h4 class="text-sm font-semibold mb-2 text-gray-300 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
                                         <ul id="audio-list" class="space-y-1 text-sm">
                                             <li class="text-gray-400">Loading tracks...</li>
                                         </ul>
                                     </div>
 
-                                    <!-- Subtitle Tracks Container (Right Column) - Added border-l for visual separation -->
-                                    <div id="subtitle-tracks-container" class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
+                                    <!-- Subtitle Tracks Container (Right Column) - Added border-l for visual separation --><div id="subtitle-tracks-container" class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
                                         <h4 class="text-sm font-semibold mb-2 text-gray-300 border-b border-gray-700/50 pb-1">Subtitles</h4>
                                         <ul id="subtitle-list" class="space-y-1 text-sm">
-                                            <!-- Subtitle options will be dynamically injected here -->
-                                            <li class="text-gray-400">Loading tracks...</li>
+                                            <!-- Subtitle options will be dynamically injected here --><li class="text-gray-400">Loading tracks...</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -207,17 +182,14 @@
                         </div>
 
 
-                        <!-- Fullscreen Button -->
-                        <button id="fullscreen-button" 
+                        <!-- Fullscreen Button --><button id="fullscreen-button" 
                                 class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
-                            <!-- Fullscreen Enter Icon (Default) -->
-                            <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
+                            <!-- Fullscreen Enter Icon (Default) --><svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
                             </svg>
 
-                            <!-- Fullscreen Exit Icon (Hidden by default) -->
-                            <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+                            <!-- Fullscreen Exit Icon (Hidden by default) --><svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
                                 <path fill="currentColor" fill-rule="evenodd" d="M24 8h-5V3h-2v7h7zM0 16h5v5h2v-7H0zm7-6H0V8h5V3h2zm12 11v-5h5v-2h-7v7z" clip-rule="evenodd"/>
                             </svg>
                         </button>
@@ -229,10 +201,8 @@
 
     </div>
 
-    <!-- Error message positioned absolutely in the top-left corner, only visible on error -->
-    <div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30">
-        <!-- Error messages will be displayed here -->
-    </div>
+    <!-- Error message positioned absolutely in the top-left corner, only visible on error --><div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30">
+        <!-- Error messages will be displayed here --></div>
 
     <script>
         const video = document.getElementById('video');
@@ -242,7 +212,7 @@
         // UI Elements
         const topOverlay = document.getElementById('top-overlay');
         const bottomOverlay = document.getElementById('bottom-overlay');
-        const customPlayButton = document.getElementById('custom-play-button');
+        const customPlayButton = document.getElementById('custom-play-button'); // Bottom bar play/pause
         const playIcon = document.getElementById('play-icon');
         const pauseIcon = document.getElementById('pause-icon');
         const volumeControlWrapper = document.getElementById('volume-control-wrapper'); 
@@ -273,8 +243,14 @@
         const audioList = document.getElementById('audio-list');
         const subtitleList = document.getElementById('subtitle-list');
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const hlsUrl = urlParams.get('url') || "https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8";
+        // NEW: Center Play/Pause elements
+        const centerPlayPauseOverlay = document.getElementById('center-play-pause-overlay');
+        const centerPlayPauseButton = document.getElementById('center-play-pause-button');
+        const centerPlayIcon = document.getElementById('center-play-icon');
+        const centerPauseIcon = document.getElementById('center-pause-icon');
+
+
+        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
         const apiKey = ""; 
 
         let hlsInstance = null; // Store the Hls instance
@@ -373,7 +349,8 @@
             }
         }
         
-        function togglePlayPauseIcon(isPaused) {
+        /** Toggles the play/pause icon in the bottom controls bar. */
+        function toggleBottomPlayPauseIcon(isPaused) {
             if (isPaused) {
                 playIcon.classList.remove('hidden');
                 pauseIcon.classList.add('hidden');
@@ -382,6 +359,20 @@
                 pauseIcon.classList.remove('hidden');
             }
         }
+
+        /** Toggles the play/pause icon in the center overlay. */
+        function toggleCenterPlayPauseIcon(isPaused) {
+            if (isPaused) {
+                centerPlayIcon.classList.remove('hidden');
+                centerPauseIcon.classList.add('hidden');
+                centerPlayPauseOverlay.classList.remove('hidden'); // Show the center overlay
+            } else {
+                centerPlayIcon.classList.add('hidden');
+                centerPauseIcon.classList.remove('hidden');
+                centerPlayPauseOverlay.classList.add('hidden'); // Hide the center overlay
+            }
+        }
+
 
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
@@ -406,6 +397,7 @@
         }
 
         function updateVolumeSlider() {
+            // Use video.volume directly since it is unmuted by default
             const volume = video.muted ? 0 : video.volume; 
             const percent = volume * 100;
             
@@ -468,6 +460,7 @@
         
         function toggleMute() {
             if (video.muted) {
+                // Restore volume to last known non-zero value
                 video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
                 video.muted = false;
             } else {
@@ -580,7 +573,8 @@
             resetInactivityTimer();
         }
 
-        function handlePlayPauseToggle() {
+        /** Main function to toggle play/pause state of the video. */
+        function toggleVideoPlayPause() {
             if (audioSubtitleMenu.classList.contains('hidden')) { 
                 if (video.paused || video.ended) {
                     video.play().catch(e => {
@@ -703,8 +697,9 @@
             });
 
             // Controls Bar Button Handlers
-            topOverlay.addEventListener('click', handlePlayPauseToggle);
-            customPlayButton.addEventListener('click', handlePlayPauseToggle);
+            topOverlay.addEventListener('click', toggleVideoPlayPause); // Top overlay now also triggers play/pause
+            customPlayButton.addEventListener('click', toggleVideoPlayPause); // Bottom bar play/pause
+            centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause); // NEW: Center play/pause
             fullscreenButton.addEventListener('click', toggleFullscreen); 
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
@@ -716,7 +711,7 @@
                 toggleAudioSubtitleMenu();
             });
             
-            // NEW: Close menu when clicking outside of it 
+            // Close menu when clicking outside of it 
             document.addEventListener('click', handleDocumentClick); 
             
             // Seeking Events
@@ -747,6 +742,8 @@
             video.addEventListener('loadedmetadata', () => {
                 updateProgress();
                 updateBufferProgress();
+                // Ensure remaining time updates even if not playing
+                remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`; 
             });
 
             video.addEventListener('volumechange', updateVolumeSlider);
@@ -758,36 +755,39 @@
 
             video.addEventListener('pause', () => {
                 showControls();
-                togglePlayPauseIcon(true);
+                toggleBottomPlayPauseIcon(true);
+                toggleCenterPlayPauseIcon(true); // Show center play button
                 clearTimeout(inactivityTimer); 
             });
 
             video.addEventListener('play', () => {
-                togglePlayPauseIcon(false);
+                toggleBottomPlayPauseIcon(false);
+                toggleCenterPlayPauseIcon(false); // Hide center play button
                 resetInactivityTimer();
             });
             
             video.addEventListener('ended', () => {
                 showControls();
-                togglePlayPauseIcon(true);
+                toggleBottomPlayPauseIcon(true);
+                toggleCenterPlayPauseIcon(true); // Show center play button
                 hideLoader(); // Ensure loader is hidden on end
             });
 
-            // Initial state setup
-            if(video.volume === 0) {
-                lastKnownVolume = 0.5;
-            } else {
-                lastKnownVolume = video.volume;
-            }
+            // Initial state setup for unmuted/paused video
+            lastKnownVolume = video.volume > 0 ? video.volume : 0.5; // Use current volume, fallback to 0.5
             updateProgress();
             updateBufferProgress(); 
-            updateVolumeSlider(); 
+            updateVolumeSlider(); // This will show volume on by default
             updateFullscreenIcon(); 
-            if (video.paused || video.ended) {
+            
+            // Since autoplay is off, this should initialize to Paused state
+            if (video.paused || video.ended) { 
                 showControls();
-                togglePlayPauseIcon(true);
+                toggleBottomPlayPauseIcon(true); // Show Play icon in bottom bar
+                toggleCenterPlayPauseIcon(true); // Show center Play icon
             } else {
-                togglePlayPauseIcon(false);
+                toggleBottomPlayPauseIcon(false);
+                toggleCenterPlayPauseIcon(false); // Hide center Play icon
                 resetInactivityTimer();
             }
         }
@@ -812,8 +812,6 @@
                     
                     // Render the menu dynamically after parsing
                     renderAudioSubtitlesMenu(hls);
-                    
-                    video.play().catch(e => console.warn("Autoplay was prevented:", e));
                 });
                 
                 // Add listener to re-render the menu if the audio track changes externally
@@ -870,7 +868,10 @@
             }
             
             // The setupInactivityDetection and general video handlers are now called when the video is ready to play.
-            video.addEventListener('canplay', setupInactivityDetection, { once: true });
+            video.addEventListener('canplay', () => {
+                hideLoader(); // Hide loader after content is ready
+                setupInactivityDetection();
+            }, { once: true });
         }
 
         window.onload = () => {
