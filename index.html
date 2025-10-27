@@ -60,6 +60,11 @@
         <!-- The Video Element. -->
         <video id="video" muted autoplay class="w-full h-full object-contain"></video>
 
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
+            <img src="https://i.giphy.com/FgH5xSNjGHZsiYPWAX.webp" class="w-20 h-20 rounded-full shadow-lg" alt="Loading indicator">
+        </div>
+
         <!-- 1. TOP OVERLAY: Full-screen, transparent layer for handling the main Play/Pause click -->
         <div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
 
@@ -258,14 +263,16 @@
         const fullscreenExitIcon = document.getElementById('fullscreen-exit-icon');
         const skipBackwardButton = document.getElementById('skip-backward-button');
         const skipForwardButton = document.getElementById('skip-forward-button');
+        
+        // Loading Indicator Element
+        const loadingIndicator = document.getElementById('loading-indicator');
 
         // Audio/Subtitle Menu Elements
-        const audioSubtitleToggle = document.getElementById('audio-subtitle-toggle'); // Added for direct click handler
+        const audioSubtitleToggle = document.getElementById('audio-subtitle-toggle');
         const audioSubtitleMenu = document.getElementById('audio-subtitle-menu');
         const audioList = document.getElementById('audio-list');
         const subtitleList = document.getElementById('subtitle-list');
 
-        // *** UPDATED HLS URL HERE ***
         const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
         const apiKey = ""; 
 
@@ -275,12 +282,25 @@
         let isSeeking = false; 
         let isVolumeAdjusting = false; 
         let lastKnownVolume = 0.5; 
+        
+        // Global references for the seeking handlers for correct cleanup
+        let currentMouseMoveHandler = null; 
+        let currentTouchMoveHandler = null; 
 
         /** Utility function to display an error message to the user. */
         function displayError(message) {
             console.error(message);
             errorMessageDiv.textContent = message;
             errorMessageDiv.classList.remove('hidden');
+        }
+
+        // --- Loading Indicator Control ---
+        function showLoader() {
+            loadingIndicator.classList.remove('hidden');
+        }
+
+        function hideLoader() {
+            loadingIndicator.classList.add('hidden');
         }
 
         // --- Time Formatting & Progress ---
@@ -323,6 +343,7 @@
 
         /** Updates the progress bar position and time displays */
         function updateProgress() {
+            // Only update the visual progress if we are not currently dragging the seek bar
             if (!video.duration || isSeeking) return;
 
             const percent = (video.currentTime / video.duration) * 100;
@@ -344,7 +365,7 @@
         }
 
         function hideControls() {
-            // Only hide controls if the menu is NOT open
+            // Only hide controls if the menu is NOT open and NOT volume adjusting
             if(audioSubtitleMenu.classList.contains('hidden')) {
                 bottomOverlay.classList.remove('controls-visible');
                 bottomOverlay.classList.add('controls-hidden');
@@ -366,7 +387,7 @@
             showControls();
             
             // Only start the timer if the video is playing, not seeking, and the menu is closed
-            if (!video.paused && !isSeeking && !isVolumeAdjusting && audioSubtitleMenu.classList.contains('hidden')) {
+            if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden')) {
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
@@ -423,6 +444,7 @@
             isVolumeAdjusting = true;
             event.preventDefault(); 
             
+            // Note: handleVolumeAdjust is correctly removed because it is a named function reference
             window.addEventListener('mousemove', handleVolumeAdjust);
             window.addEventListener('mouseup', endVolumeAdjusting);
             window.addEventListener('touchmove', handleVolumeAdjust);
@@ -466,11 +488,9 @@
             return video.duration * seekRatio;
         }
 
-        function handleSeek(event) {
+        function handleSeek(clientX) {
             if (!video.duration || video.duration === Infinity) return;
-            event.preventDefault(); 
             
-            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
             const newTime = calculateNewTime(clientX);
             
             const percent = (newTime / video.duration) * 100;
@@ -483,29 +503,47 @@
 
         function startSeeking(event) {
             if (!video.duration || video.duration === Infinity) return;
+            
+            // Set up drag state
             isSeeking = true;
             showControls(); 
             seekThumb.classList.add('scale-100');
             
-            window.addEventListener('mousemove', handleSeek);
+            // Define handlers with references that can be used for removal
+            currentMouseMoveHandler = (e) => handleSeek(e.clientX);
+            currentTouchMoveHandler = (e) => handleSeek(e.touches[0].clientX);
+
+            // Add global listeners
+            window.addEventListener('mousemove', currentMouseMoveHandler);
             window.addEventListener('mouseup', endSeeking);
-            window.addEventListener('touchmove', handleSeek);
+            window.addEventListener('touchmove', currentTouchMoveHandler, { passive: true });
             window.addEventListener('touchend', endSeeking);
 
-            handleSeek(event);
+            // Initial seek update
+            handleSeek(event.touches ? event.touches[0].clientX : event.clientX);
         }
 
         function endSeeking(event) {
             if (!isSeeking) return;
-            isSeeking = false;
-            
-            window.removeEventListener('mousemove', handleSeek);
-            window.removeEventListener('mouseup', endSeeking);
-            window.removeEventListener('touchmove', handleSeek);
-            window.removeEventListener('touchend', endSeeking);
             
             const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+            // Final seek calculation and application to video
             video.currentTime = calculateNewTime(clientX);
+            
+            isSeeking = false;
+            seekThumb.classList.remove('scale-100');
+            
+            // CRITICAL: Remove the listeners using the stored references
+            if (currentMouseMoveHandler) {
+                window.removeEventListener('mousemove', currentMouseMoveHandler);
+                currentMouseMoveHandler = null;
+            }
+            if (currentTouchMoveHandler) {
+                window.removeEventListener('touchmove', currentTouchMoveHandler);
+                currentTouchMoveHandler = null;
+            }
+            window.removeEventListener('mouseup', endSeeking);
+            window.removeEventListener('touchend', endSeeking);
             
             resetInactivityTimer();
         }
@@ -553,7 +591,7 @@
             }
         }
         
-        // --- NEW: Audio/Subtitle Click Toggling Logic ---
+        // --- Audio/Subtitle Click Toggling Logic ---
 
         /** Toggles the visibility of the Audio/Subtitle menu. */
         function toggleAudioSubtitleMenu() {
@@ -571,6 +609,21 @@
                 // Close the menu
                 audioSubtitleMenu.classList.add('hidden');
                 resetInactivityTimer(); // Restart the inactivity timer
+            }
+        }
+        
+        /** Handles closing the menu if a click occurs outside the menu or toggle button. */
+        function handleDocumentClick(event) {
+            // Check if the menu is open
+            if (!audioSubtitleMenu.classList.contains('hidden')) {
+                const isClickInsideMenu = audioSubtitleMenu.contains(event.target);
+                const isClickOnToggle = audioSubtitleToggle.contains(event.target);
+                
+                // If the click is neither inside the menu nor on the toggle button itself, close the menu.
+                if (!isClickInsideMenu && !isClickOnToggle) {
+                    audioSubtitleMenu.classList.add('hidden');
+                    resetInactivityTimer(); 
+                }
             }
         }
 
@@ -656,8 +709,14 @@
             skipForwardButton.addEventListener('click', handleSkipForward);
             muteButton.addEventListener('click', toggleMute); 
             
-            // NEW: Audio/Subtitle Menu Toggle
-            audioSubtitleToggle.addEventListener('click', toggleAudioSubtitleMenu);
+            // Audio/Subtitle Menu Toggle
+            audioSubtitleToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Stop propagation to prevent document click handler from immediately closing it
+                toggleAudioSubtitleMenu();
+            });
+            
+            // NEW: Close menu when clicking outside of it 
+            document.addEventListener('click', handleDocumentClick); 
             
             // Seeking Events
             seekBar.addEventListener('mousedown', startSeeking);
@@ -671,6 +730,7 @@
             volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
             volumeControlWrapper.addEventListener('mouseleave', () => {
                  setTimeout(() => {
+                    // Only hide if we aren't actively dragging the volume slider
                     if (!isVolumeAdjusting) {
                         volumeSliderContainer.classList.add('hidden');
                     }
@@ -690,6 +750,11 @@
 
             video.addEventListener('volumechange', updateVolumeSlider);
 
+            // Loading/Buffering Handlers
+            video.addEventListener('waiting', showLoader);
+            video.addEventListener('playing', hideLoader);
+            video.addEventListener('canplay', hideLoader); // Useful if video stalls and then recovers
+
             video.addEventListener('pause', () => {
                 showControls();
                 togglePlayPauseIcon(true);
@@ -704,6 +769,7 @@
             video.addEventListener('ended', () => {
                 showControls();
                 togglePlayPauseIcon(true);
+                hideLoader(); // Ensure loader is hidden on end
             });
 
             // Initial state setup
@@ -731,6 +797,7 @@
         function initHlsPlayer(url) {
             if (Hls.isSupported()) {
                 console.log('HLS.js is supported. Initializing player.');
+                showLoader(); // Show loader immediately upon starting HLS init
                 
                 const hls = new Hls();
                 hlsInstance = hls; // Store the instance globally
@@ -781,6 +848,7 @@
                             default:
                                 hls.destroy();
                                 displayError("Fatal HLS error. Cannot play stream.");
+                                hideLoader();
                                 break;
                         }
                     } else {
@@ -797,8 +865,10 @@
                 video.src = url;
             } else {
                 displayError('Your browser does not support HLS streaming, even with hls.js.');
+                hideLoader();
             }
             
+            // The setupInactivityDetection and general video handlers are now called when the video is ready to play.
             video.addEventListener('canplay', setupInactivityDetection, { once: true });
         }
 
