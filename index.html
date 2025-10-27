@@ -273,7 +273,8 @@
         const audioList = document.getElementById('audio-list');
         const subtitleList = document.getElementById('subtitle-list');
 
-        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
+        const urlParams = new URLSearchParams(window.location.search);
+        const hlsUrl = urlParams.get('url') || "https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8";
         const apiKey = ""; 
 
         let hlsInstance = null; // Store the Hls instance
