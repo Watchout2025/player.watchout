@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional HLS Video Player (Mobile Skip Fix)</title>
+    <title>Functional HLS Video Player (Corrected)</title>
     
 <script src="https://cdn.tailwindcss.com"></script>
     
@@ -236,12 +236,13 @@
                             
                             
 <div id="audio-subtitle-menu" 
-                                 class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] bg-black/80 rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200">
+                                 class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200"
+                                 style="background-color: #262626;"> 
                                 
                                 <div class="flex gap-4">
                                     
 <div id="audio-tracks-container" class="flex-1 max-h-64 overflow-y-auto pr-2">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-300 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
+                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
                                         <ul id="audio-list" class="space-y-1 text-sm">
                                             <li class="text-gray-400">Loading tracks...</li>
                                         </ul>
@@ -249,7 +250,7 @@
 
                                     
 <div id="subtitle-tracks-container" class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-300 border-b border-gray-700/50 pb-1">Subtitles</h4>
+                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Subtitles</h4>
                                         <ul id="subtitle-list" class="space-y-1 text-sm">
                                             
 <li class="text-gray-400">Loading tracks...</li>
@@ -345,6 +346,40 @@
         
         let currentMouseMoveHandler = null; 
         let currentTouchMoveHandler = null; 
+        
+        // --- Language Code Mapping (ISO 639-1/2 to Full Name) ---
+        const languageCodeMap = {
+            'eng': 'English', 'en': 'English', 'und': 'Undefined', // Common defaults
+            'hin': 'Hindi', 'hi': 'Hindi',
+            'tel': 'Telugu', 'te': 'Telugu',
+            'tam': 'Tamil', 'ta': 'Tamil',
+            'kan': 'Kannada', 'kn': 'Kannada',
+            'spa': 'Spanish', 'es': 'Spanish',
+            'fre': 'French', 'fr': 'French',
+            'ger': 'German', 'de': 'German',
+            'ita': 'Italian', 'it': 'Italian',
+            'jpn': 'Japanese', 'ja': 'Japanese',
+            'por': 'Portuguese', 'pt': 'Portuguese',
+            'rus': 'Russian', 'ru': 'Russian',
+            'zho': 'Chinese', 'zh': 'Chinese',
+            'ara': 'Arabic', 'ar': 'Arabic',
+            'kor': 'Korean', 'ko': 'Korean',
+        };
+
+        /** Attempts to translate a short language code (e.g., 'eng') to a full name (e.g., 'English'). */
+        function getFullLanguageName(code) {
+            if (!code) return '';
+            const lowerCode = code.toLowerCase();
+            
+            // 1. Check if the full name is in the map
+            if (languageCodeMap[lowerCode]) {
+                return languageCodeMap[lowerCode];
+            }
+            
+            // 2. Fallback: If it's not a common code, just capitalize the first letter
+            return code.charAt(0).toUpperCase() + code.slice(1);
+        }
+
 
         /** Utility function to display an error message to the user. */
         function displayError(message) {
@@ -438,9 +473,11 @@
             }
         }
 
-        /** Updates the large center play/pause icon based on pause state. 
-         * The container visibility is now managed by showControls/hideControls. */
+        /** Updates the large center play/pause icon based on pause state. */
         function updateCenterPlayPauseIcon(isPaused) {
+            // Fix for Bug #2: The button itself is the click target and must remain visible
+            centerPlayPauseButton.classList.remove('hidden'); 
+
             if (isPaused) {
                 centerPlayIcon.classList.remove('hidden');
                 centerPauseIcon.classList.add('hidden');
@@ -568,10 +605,6 @@
                 window.removeEventListener('mousemove', currentMouseMoveHandler);
                 currentMouseMoveHandler = null;
             }
-            if (currentTouchMoveHandler) {
-                window.removeEventListener('touchmove', currentTouchMoveHandler);
-                currentTouchMoveHandler = null;
-            }
             window.removeEventListener('mouseup', endSeeking);
             window.removeEventListener('touchend', endSeeking);
             resetInactivityTimer();
@@ -645,6 +678,39 @@
             audioList.innerHTML = '';
             subtitleList.innerHTML = '';
             
+            // --- Track Name Generation Logic (Fix for Bug #1) ---
+            const getDisplayName = (track, isHls) => {
+                const rawLangCode = isHls ? track.lang : track.language;
+                const primaryLabel = isHls ? track.name : track.label;
+                let trackName = '';
+
+                // 1. Prioritize translation of the official language code (e.g., 'eng' -> 'English')
+                if (rawLangCode) {
+                    trackName = getFullLanguageName(rawLangCode);
+                }
+
+                // 2. If the primary label exists, check if it's a known short code or a better display name
+                if (primaryLabel) {
+                    const lowerLabel = primaryLabel.toLowerCase();
+
+                    // Check if the primary label itself is a known short code (e.g., label is 'eng', not 'English')
+                    if (languageCodeMap[lowerLabel]) {
+                        trackName = languageCodeMap[lowerLabel]; // Use the full name from the map
+                    }
+                    // If the explicit label is not a short code, and we only had a fallback name before (like 'Und' or empty), use the label.
+                    else if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === rawLangCode.toLowerCase()) {
+                        trackName = primaryLabel;
+                    }
+                }
+
+                // 3. Final Fallback
+                if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === 'und') {
+                    return `Track ${track.id || track.groupId}`;
+                }
+                
+                return trackName;
+            };
+
             // --- 1. AUDIO TRACKS ---
             let tracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
             let currentIndex = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t => t.enabled) : -1);
@@ -655,9 +721,12 @@
 
             tracks.forEach((track, index) => {
                 const isSelected = isHlsJsMode ? (index === currentIndex) : (track.enabled);
+                const trackName = getDisplayName(track, isHlsJsMode);
+
                 const li = document.createElement('li');
-                li.className = `track-selector cursor-pointer hover:text-red-400 p-1 rounded transition ${isSelected ? 'font-bold text-red-400 bg-red-900/20' : 'text-gray-200'}`;
-                li.textContent = isHlsJsMode ? (track.name || track.lang || `Track ${index + 1}`) : (track.label || track.language || `Track ${index + 1}`);
+                // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
+                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
+                li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'audio');
                 li.addEventListener('click', () => handleTrackSelection('audio', index));
@@ -673,22 +742,26 @@
             // Add 'Off' option first
             const isOffSelected = (currentSubIndex === -1);
             const offLi = document.createElement('li');
-            offLi.className = `track-selector cursor-pointer hover:text-red-400 p-1 rounded transition ${isOffSelected ? 'font-bold text-red-400 bg-red-900/20' : 'text-gray-200'}`;
+            // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
+            offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isOffSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
             offLi.textContent = 'Off';
             offLi.setAttribute('data-index', -1); 
             offLi.setAttribute('data-type', 'subtitle');
             offLi.addEventListener('click', () => handleTrackSelection('subtitle', -1));
             subtitleList.appendChild(offLi);
             
-            if (subTracks.length === 0) {
+            if (subTracks.length === 0 && !isOffSelected) {
                  subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
             }
 
             subTracks.forEach((track, index) => {
                 const isSelected = isHlsJsMode ? (index === currentSubIndex) : (track.mode === 'showing');
+                const trackName = getDisplayName(track, isHlsJsMode);
+
                 const li = document.createElement('li');
-                li.className = `track-selector cursor-pointer hover:text-red-400 p-1 rounded transition ${isSelected ? 'font-bold text-red-400 bg-red-900/20' : 'text-gray-200'}`;
-                li.textContent = isHlsJsMode ? (track.name || track.lang || `CC ${index + 1}`) : (track.label || track.language || `CC ${index + 1}`);
+                // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
+                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
+                li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'subtitle');
                 li.addEventListener('click', () => handleTrackSelection('subtitle', index));
@@ -790,15 +863,15 @@
             video.addEventListener('canplay', hideLoader);
 
             video.addEventListener('pause', () => {
-                showControls(); // Show all controls
+                showControls(); // Show all controls (bottom bar and center container)
                 updateBottomPlayPauseIcon(true);
-                updateCenterPlayPauseIcon(true); // Show center icon
+                updateCenterPlayPauseIcon(true); 
                 clearTimeout(inactivityTimer); 
             });
 
             video.addEventListener('play', () => {
                 updateBottomPlayPauseIcon(false);
-                updateCenterPlayPauseIcon(false); // Hide center icon, but container remains visible via resetInactivityTimer
+                updateCenterPlayPauseIcon(false); 
                 resetInactivityTimer();
             });
             
