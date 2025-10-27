@@ -166,6 +166,7 @@
 
                         <!-- Audio & Subtitle Button and Menu Wrapper (Hover Trigger) -->
                         <div class="relative" id="audio-subtitle-wrapper">
+                            <!-- NOTE: The click handler will be added via JavaScript -->
                             <button id="audio-subtitle-toggle" 
                                     class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                                     title="Audio & Subtitles">
@@ -175,7 +176,7 @@
                                 </svg>
                             </button>
                             
-                            <!-- Menu Popover (Dynamic Content) - UPDATED FOR SIDE-BY-SIDE LAYOUT -->
+                            <!-- Menu Popover (Dynamic Content) - Side-by-Side Layout -->
                             <div id="audio-subtitle-menu" 
                                  class="absolute bottom-14 right-0 w-[450px] bg-black/80 rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200">
                                 
@@ -259,12 +260,13 @@
         const skipForwardButton = document.getElementById('skip-forward-button');
 
         // Audio/Subtitle Menu Elements
-        const audioSubtitleWrapper = document.getElementById('audio-subtitle-wrapper');
+        const audioSubtitleToggle = document.getElementById('audio-subtitle-toggle'); // Added for direct click handler
         const audioSubtitleMenu = document.getElementById('audio-subtitle-menu');
         const audioList = document.getElementById('audio-list');
         const subtitleList = document.getElementById('subtitle-list');
 
-        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; // Switched to a multi-track demo URL
+        // *** UPDATED HLS URL HERE ***
+        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
         const apiKey = ""; 
 
         let hlsInstance = null; // Store the Hls instance
@@ -334,7 +336,7 @@
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
 
-        // --- Controls Visibility ---
+        // --- Controls Visibility & Inactivity ---
 
         function showControls() {
             bottomOverlay.classList.remove('controls-hidden');
@@ -342,6 +344,7 @@
         }
 
         function hideControls() {
+            // Only hide controls if the menu is NOT open
             if(audioSubtitleMenu.classList.contains('hidden')) {
                 bottomOverlay.classList.remove('controls-visible');
                 bottomOverlay.classList.add('controls-hidden');
@@ -362,12 +365,13 @@
             clearTimeout(inactivityTimer);
             showControls();
             
+            // Only start the timer if the video is playing, not seeking, and the menu is closed
             if (!video.paused && !isSeeking && !isVolumeAdjusting && audioSubtitleMenu.classList.contains('hidden')) {
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
         
-        // --- Volume, Seeking, Fullscreen (Unchanged Logic) ---
+        // --- Volume, Seeking, Fullscreen ---
 
         function updateMuteIcon() {
             if (video.muted || video.volume === 0) {
@@ -548,8 +552,30 @@
                 }
             }
         }
+        
+        // --- NEW: Audio/Subtitle Click Toggling Logic ---
 
-        // --- NEW: Audio/Subtitle Switching Logic ---
+        /** Toggles the visibility of the Audio/Subtitle menu. */
+        function toggleAudioSubtitleMenu() {
+            const isCurrentlyHidden = audioSubtitleMenu.classList.contains('hidden');
+
+            if (isCurrentlyHidden) {
+                // Open the menu
+                if (hlsInstance) {
+                    renderAudioSubtitlesMenu(hlsInstance); // Re-render to show current selection
+                }
+                audioSubtitleMenu.classList.remove('hidden');
+                clearTimeout(inactivityTimer); // Crucial: Keep controls visible while menu is open
+                showControls(); // Ensure controls are fully visible
+            } else {
+                // Close the menu
+                audioSubtitleMenu.classList.add('hidden');
+                resetInactivityTimer(); // Restart the inactivity timer
+            }
+        }
+
+
+        // --- Audio/Subtitle Switching Logic ---
 
         /** * Renders the dynamic audio and subtitle lists based on HLS data.
          * @param {Hls} hls The active hls.js instance.
@@ -630,6 +656,9 @@
             skipForwardButton.addEventListener('click', handleSkipForward);
             muteButton.addEventListener('click', toggleMute); 
             
+            // NEW: Audio/Subtitle Menu Toggle
+            audioSubtitleToggle.addEventListener('click', toggleAudioSubtitleMenu);
+            
             // Seeking Events
             seekBar.addEventListener('mousedown', startSeeking);
             seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
@@ -638,7 +667,7 @@
             volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
             volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
             
-            // Volume Slider Visibility
+            // Volume Slider Visibility (Hover/Mouseenter logic preserved)
             volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
             volumeControlWrapper.addEventListener('mouseleave', () => {
                  setTimeout(() => {
@@ -646,23 +675,6 @@
                         volumeSliderContainer.classList.add('hidden');
                     }
                  }, 300);
-            });
-            
-            // Audio/Subtitle Menu Handlers (Hover Logic)
-            audioSubtitleWrapper.addEventListener('mouseenter', () => {
-                if (hlsInstance) {
-                    renderAudioSubtitlesMenu(hlsInstance); // Re-render to ensure current selection is highlighted
-                }
-                audioSubtitleMenu.classList.remove('hidden');
-                clearTimeout(inactivityTimer); 
-            });
-            audioSubtitleWrapper.addEventListener('mouseleave', () => {
-                setTimeout(() => {
-                    if (!audioSubtitleWrapper.contains(document.activeElement)) {
-                        audioSubtitleMenu.classList.add('hidden');
-                        resetInactivityTimer(); 
-                    }
-                }, 100);
             });
             
             // System Listeners
@@ -739,13 +751,19 @@
                 // Add listener to re-render the menu if the audio track changes externally
                 hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => {
                     console.log(`Audio track switched to: ${hls.audioTrack}`);
-                    renderAudioSubtitlesMenu(hls); 
+                    // Only re-render if the menu is visible to avoid unnecessary work
+                    if (!audioSubtitleMenu.classList.contains('hidden')) {
+                         renderAudioSubtitlesMenu(hls);
+                    }
                 });
                 
                 // Add listener to re-render the menu if the subtitle track changes externally
                 hls.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, () => {
                     console.log(`Subtitle track switched to: ${hls.subtitleTrack}`);
-                    renderAudioSubtitlesMenu(hls);
+                    // Only re-render if the menu is visible to avoid unnecessary work
+                    if (!audioSubtitleMenu.classList.contains('hidden')) {
+                        renderAudioSubtitlesMenu(hls);
+                    }
                 });
 
 
