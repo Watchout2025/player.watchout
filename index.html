@@ -625,14 +625,6 @@
             </div>
         </div>
 
-        <!-- Configuration -->
-        <div class="config-area">
-            <div class="url-input-group">
-                <input type="text" id="m3u8-url" placeholder="Paste your .m3u8 link here" value="https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8">
-                <button id="load-button">Load Stream</button>
-            </div>
-            <p class="status-message" id="status-message">Ready to load stream.</p>
-        </div>
     </div>
 
     <script>
@@ -1379,29 +1371,16 @@
             });
 
 
-            // --- Initialization ---
-
-            loadButton.addEventListener('click', () => {
-                const url = urlInput.value.trim();
-                if (url) {
-                    updateStatus('Loading stream...', 'info');
-                    loadHlsStream(url);
-                } else {
-                    updateStatus('Please enter a valid M3U8 URL.', 'error');
-                }
-            });
-
             // 1. Check for URL parameter for auto-loading
             const initialUrl = getUrlParameter('url');
 
             if (initialUrl) {
                 urlInput.value = initialUrl;
-                updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
+                //updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
                 loadHlsStream(initialUrl); // Auto-load the URL from the parameter
             } else if (urlInput.value) {
                 // 2. Load the default value if no parameter is present
-                updateStatus('Loading default stream...', 'info');
-                loadHlsStream(urlInput.value);
+                //updateStatus('No stream Url Found ?url=...', 'info');
             }
 
             // Populate the speed menu on load
