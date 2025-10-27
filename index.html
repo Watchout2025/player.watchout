@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Full-Screen HLS Stream Player with Custom Controls</title>
+    <title>Full-Screen HLS Video Player with Volume Slider</title>
     <!-- Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load hls.js library -->
@@ -125,7 +125,7 @@
                         <!-- MUTE/UNMUTE Button & Volume Slider Wrapper -->
                         <div id="volume-control-wrapper" class="relative flex items-center h-12">
                             <!-- Volume Slider Container (Hidden by default, shows on hover) -->
-                            <div id="volume-slider-container" class="absolute bottom-16 -left-3 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
+                            <div id="volume-slider-container" class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
                                 <!-- Vertical Slider Track -->
                                 <div id="volume-slider" class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
                                     <!-- Volume Level Indicator (Red) -->
