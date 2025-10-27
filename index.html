@@ -84,7 +84,7 @@
 <div id="center-play-pause-overlay" 
              class="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
             <button id="center-play-pause-button" 
-                    class="text-white bg-black/50 rounded-full p-3 md:p-4 hover:bg-black/70 transition-all duration-200 focus:outline-none">
+                    class="text-white p-3 md:p-4 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
                 
                 
 <svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
@@ -729,10 +729,9 @@
             seekBar.addEventListener('mousedown', startSeeking);
             seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
 
-            // Volume visibility handlers (Note: Volume adjusting handlers are defined in the previous version and omitted here for brevity, but the logic remains the same for volume-slider-track listeners)
+            // Volume visibility handlers
             volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
             volumeControlWrapper.addEventListener('mouseleave', () => {
-                 // A slight delay in case the mouse briefly leaves the wrapper while adjusting
                  setTimeout(() => { if (!isVolumeAdjusting) { volumeSliderContainer.classList.add('hidden'); } }, 300);
             });
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
