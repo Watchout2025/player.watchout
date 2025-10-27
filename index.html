@@ -968,7 +968,7 @@
                         if (type === 'audio') {
                             if (hls && listIndex !== hls.audioTrack) {
                                 hls.audioTrack = listIndex;
-                                updateStatus(`Audio track switched to: ${trackName}`, 'success');
+                                //updateStatus(`Audio track switched to: ${trackName}`, 'success');
                             }
                         } else if (type === 'subtitle') {
                             // Subtitle tracks map:
@@ -979,7 +979,7 @@
 
                             if (hls && hlsTrackIndex !== hls.subtitleTrack) {
                                 hls.subtitleTrack = hlsTrackIndex;
-                                updateStatus(`Subtitle track switched to: ${trackName}`, 'success');
+                                //updateStatus(`Subtitle track switched to: ${trackName}`, 'success');
                                 
                                 // HLS.js handles the video's textTracks, but for robustness
                                 // we can hide all and show the one corresponding to the selected HLS track.
@@ -1071,16 +1071,16 @@
                     video.addEventListener('loadedmetadata', () => {
                         video.play().catch(e => {
                             console.warn("Autoplay was prevented by browser (Native HLS).", e);
-                            updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
+                            //updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
                         });
-                        updateStatus('Stream loaded and playing (Native HLS).', 'success');
+                        //updateStatus('Stream loaded and playing (Native HLS).', 'success');
                     }, { once: true });
                 } 
                 else if (Hls.isSupported()) {
                     hls = new Hls();
                     
                     hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                        updateStatus('Media attached. Loading source...', 'info');
+                        //updateStatus('Media attached. Loading source...', 'info');
                         hls.loadSource(hlsUrl);
                     });
 
@@ -1088,10 +1088,10 @@
                         // Tracks are available, run selection logic and populate the lists
                         loadHlsTracks(); 
                         video.play().then(() => {
-                            updateStatus('Manifest parsed. Playback started automatically.', 'success');
+                            //updateStatus('Manifest parsed. Playback started automatically.', 'success');
                         }).catch(e => {
                             console.warn("Autoplay was prevented by browser (HLS.js).", e);
-                            updateStatus('Manifest parsed. Press Play to start.', 'info');
+                            //updateStatus('Manifest parsed. Press Play to start.', 'info');
                         });
                     });
 
@@ -1100,17 +1100,17 @@
                         const errorMsg = `HLS.js Error: ${data.details}. Fatal: ${data.fatal}. Check console for details.`;
 
                         if (data.fatal) {
-                            updateStatus(errorMsg, 'error');
+                            //updateStatus(errorMsg, 'error');
                             hls.destroy();
                             hls = null;
-                            updateStatus('Playback failed. Check the M3U8 link or network connection.', 'error');
+                            //updateStatus('Playback failed. Check the M3U8 link or network connection.', 'error');
                         }
                     });
 
                     hls.attachMedia(video);
                 } 
                 else {
-                    updateStatus('HLS is not supported in this browser. Please use a modern browser.', 'error');
+                    //updateStatus('HLS is not supported in this browser. Please use a modern browser.', 'error');
                 }
             }
 
@@ -1381,11 +1381,11 @@
 
             if (initialUrl) {
                 //urlInput.value = initialUrl;
-                updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
+                //updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
                 loadHlsStream(initialUrl); // Auto-load the URL from the parameter
             } else {
                 // 2. Load the default value if no parameter is present
-                updateStatus('Loading default stream...', 'info');
+                //updateStatus('Loading default stream...', 'info');
                 //loadHlsStream(urlInput.value);
             }
 
