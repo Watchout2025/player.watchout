@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced HLS Video Player</title>
+    <!-- Include the hls.js library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        /* --- CSS Variables --- */
+        :root {
+            --player-bg: #1c1c1c;
+            --accent-color: #0099ff; /* Blue for secondary controls/active states */
+            --seek-color: #E50914; /* NETFLIX RED for Progress Bar and Active Speed */
+            --text-color: #f0f0f0;
+            --border-radius: 8px;
+            --webkit-progress-percent: 0%; /* Dynamic variable for seek bar fill */
+            --webkit-volume-percent: 50%; /* Dynamic variable for volume bar fill */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 10vh;
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        /* --- Player Container --- */
+        .player-container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--player-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Video Wrapper (for positioning controls) --- */
+        .video-wrapper {
+            position: relative;
+            background-color: #000;
+        }
+
+        #hls-video {
+            width: 100%;
+            height: auto;
+            display: block;
+            background-color: #000;
+        }
+
+        /* Hide the native video controls */
+        #hls-video:not([controls]) {
+            /* Enable pointer events so the custom click handler works */
+            pointer-events: auto; 
+        }
+        
+        /* --- URL Input and Status Section --- */
+        .config-area {
+            padding: 15px;
+            background-color: #222;
+        }
+
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #m3u8-url {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #3a3a3a;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        #load-button {
+            padding: 10px 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        #load-button:hover {
+            background-color: #0077cc;
+        }
+        #load-button:active {
+            transform: scale(0.98);
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 8px;
+            font-size: 13px;
+            color: #ccc;
+            background-color: #333;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .status-message.error {
+            color: #ffcccc;
+            background-color: #882222;
+        }
+        .status-message.success {
+            color: #ccffcc;
+            background-color: #228822;
+        }
+
+        /* --- Central Overlay Button --- */
+        #center-play-pause-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.4); /* Dark, slightly transparent background */
+            color: var(--text-color);
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 5; /* Below bottom controls (z-index: 10) but above video */
+            opacity: 1; /* Start visible */
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+            /* Ensure the central button sits on top of the video area but below controls */
+            pointer-events: auto;
+        }
+
+        #center-play-pause-btn:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        #center-play-pause-btn svg {
+            width: 48px;
+            height: 48px;
+            /* Adjust play icon to look centered in the circle */
+            transform: translateX(4px); 
+        }
+
+        /* Class to hide the central button when video is playing */
+        .playing-hide-center {
+            opacity: 0 !important;
+            /* Crucial: Disable pointer events so the click can pass through to the video element */
+            pointer-events: none !important; 
+        }
+
+
+        /* --- Progress Bar and Time Wrapper --- */
+        .progress-bar-wrapper {
+            position: absolute;
+            bottom: 45px; 
+            left: 0;
+            width: 100%;
+            padding: 0 15px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            /* Added for hiding functionality */
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out; 
+        }
+        
+        .seek-bar-container {
+            flex-grow: 1; 
+            height: 12px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* --- Custom Controls (Bottom Bar) --- */
+        .custom-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 15px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            /* Added for hiding functionality */
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 10;
+        }
+
+        /* CLASS TO HIDE CONTROLS */
+        .controls-hidden .progress-bar-wrapper,
+        .controls-hidden .custom-controls {
+            opacity: 0;
+            pointer-events: none; /* Prevents clicks on hidden controls */
+        }
+        
+        .control-button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 5px;
+            font-size: 20px;
+            line-height: 1;
+            border-radius: 4px;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+            /* Ensure text and icon are aligned */
+            display: flex; 
+            align-items: center;
+            gap: 4px; /* Space between icon and text for speed button */
+        }
+
+        .icon {
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+        .icon path {
+            fill: currentColor;
+        }
+        
+        .time-display {
+            font-size: 13px;
+            white-space: nowrap;
+            color: #ccc;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        
+        /* Seek Bar (Progress Bar) STYLING - NETFLIX RED */
+        #seek-bar {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            border-radius: 2px;
+            transition: height 0.2s;
+        }
+        
+        /* Style for the track (Webkit/Chrome/Safari) */
+        #seek-bar::-webkit-slider-runnable-track {
+            height: 5px;
+            /* Use gradient to show progress (Red up to --webkit-progress-percent, then Grey) */
+            background: linear-gradient(to right, 
+                var(--seek-color) 0%, 
+                var(--seek-color) var(--webkit-progress-percent), 
+                #555 var(--webkit-progress-percent), 
+                #555 100%
+            );
+            border-radius: 2px;
+        }
+        
+        /* Thumb Style (Webkit/Chrome/Safari) - NETFLIX RED */
+        #seek-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--seek-color);
+            cursor: pointer;
+            margin-top: -4.5px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Hover effect increases track height */
+        #seek-bar:hover::-webkit-slider-runnable-track {
+            height: 8px;
+            cursor: pointer; /* Added cursor pointer on hover */
+        }
+
+        
+        /* VOLUME CONTROL STYLING - RED TO MATCH SEEK BAR */
+        .volume-control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            width: 100px;
+        }
+        
+        #volume-bar {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent; /* Use transparent so the custom track style shows */
+            border-radius: 2px;
+            cursor: pointer; /* Added cursor pointer */
+        }
+
+        /* Track Style for Volume Bar (using gradient based on --webkit-volume-percent) */
+        #volume-bar::-webkit-slider-runnable-track {
+            height: 5px;
+            background: linear-gradient(to right, 
+                var(--seek-color) 0%, 
+                var(--seek-color) var(--webkit-volume-percent), 
+                #555 var(--webkit-volume-percent), 
+                #555 100%
+            );
+            border-radius: 2px;
+        }
+
+        /* Thumb Style for Volume Bar (Red) */
+        #volume-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--seek-color); /* RED THUMB */
+            cursor: pointer;
+            margin-top: -3.5px;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- Menu Positioning and Shared Menu Styles --- */
+        .menu-container {
+            position: relative;
+            z-index: 20;
+        }
+
+        /* This targets the Speed button container and pushes it (and the rest) to the right */
+        #speed-menu-container {
+            margin-left: auto;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            bottom: 60px;
+            /* Set right alignment to be near the settings/fullscreen button group */
+            right: 15px; 
+            background-color: #2c2c2c;
+            border-radius: 6px;
+            padding: 10px;
+            width: 250px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            opacity: 1;
+            transition: opacity 0.2s ease-in-out;
+            max-height: 350px;
+            overflow-y: auto;
+            z-index: 30; /* Ensure menus are above other elements */
+        }
+
+        .dropdown-menu.hidden {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        /* Tracks (Audio/Subtitle) Menu Specific */
+        .track-groups-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .track-section {
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 3px;
+        }
+
+        .track-list, .speed-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .menu-item {
+            font-size: 13px;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-item:hover {
+            background-color: #3a3a3a;
+        }
+
+        .menu-item.active {
+            background-color: var(--seek-color); /* Used seek-color for consistency */
+            color: var(--player-bg); 
+            font-weight: 600;
+        }
+
+        .menu-item.active:hover {
+            background-color: #aa0711;
+        }
+
+        /* --- SPEED MENU STYLING (Horizontal Slider) --- */
+        #speed-menu {
+            width: 300px; 
+            right: 50px; /* Adjusted to be near the button */
+            padding: 15px 20px 10px;
+            max-height: fit-content; 
+            overflow: hidden;
+        }
+
+        #speed-menu .section-title {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .speed-track {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            padding-top: 10px; 
+            padding-bottom: 25px; 
+        }
+
+        /* The horizontal line connecting the dots */
+        .speed-track::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #555;
+            z-index: 1;
+        }
+
+        .speed-option-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            z-index: 2; 
+            transition: transform 0.1s;
+        }
+
+        .speed-option-wrapper:hover {
+            transform: translateY(-2px);
+        }
+
+        .speed-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #555;
+            border-radius: 50%;
+            margin-bottom: 10px; 
+            transition: all 0.2s;
+        }
+
+        /* Active state for the dot */
+        .speed-option-wrapper.active .speed-dot {
+            background-color: var(--seek-color); 
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--text-color);
+            box-shadow: 0 0 5px var(--seek-color);
+        }
+
+        .speed-label {
+            font-size: 13px;
+            color: #ccc;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+
+        /* Active state for the label */
+        .speed-option-wrapper.active .speed-label {
+            color: var(--text-color);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <div class="video-wrapper">
+            <!-- This is the element we target for click-to-play/pause -->
+            <video id="hls-video" preload="auto"></video>
+
+            <!-- Central Play/Pause Overlay -->
+            <button id="center-play-pause-btn" title="Play/Pause">
+                <!-- Play Icon SVG (Show when paused) -->
+                <svg id="center-play-icon" class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+                </svg>
+                <!-- Pause Icon SVG (Show when playing, but hide initially) -->
+                <svg id="center-pause-icon" class="icon" style="display: none;" viewBox="0 0 24 24">
+                    <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+
+
+            <!-- SETTINGS MENU (Audio/Subtitles) -->
+            <div id="settings-menu" class="dropdown-menu hidden">
+                <div class="track-groups-container">
+                    <div class="track-section">
+                        <h4 class="section-title">Audio Tracks</h4>
+                        <ul id="audio-track-list" class="track-list">
+                            <li class="menu-item" style="cursor: default;">Loading audio tracks...</li>
+                        </ul>
+                    </div>
+                    <div class="track-section">
+                        <h4 class="section-title">Subtitles/CC</h4>
+                        <ul id="subtitle-track-list" class="track-list">
+                            <li class="menu-item" style="cursor: default;">Loading subtitles...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SPEED MENU (Now a Horizontal Slider) -->
+            <div id="speed-menu" class="dropdown-menu hidden">
+                <h4 class="section-title">Playback Speed</h4>
+                <div id="speed-list" class="speed-list">
+                    <!-- Speed options will be dynamically populated by JS into a horizontal track -->
+                </div>
+            </div>
+
+            <!-- PROGRESS BAR AND TIME WRAPPER (Aligned Side-by-Side) -->
+            <div class="progress-bar-wrapper">
+                 <div class="seek-bar-container">
+                    <!-- Seek bar is now purely cosmetic; seeking is handled by JS on the container -->
+                    <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" style="--webkit-progress-percent: 0%;">
+                </div>
+                <!-- Remaining Time Display (Now positioned right next to the seek bar) -->
+                <span class="time-display" id="time-display">00:00</span>
+            </div>
+
+            <!-- Custom Controls (Now only contains buttons, volume, and speed/settings menus) -->
+            <div class="custom-controls">
+                
+                <!-- Play/Pause Button (Bottom Left) -->
+                <button id="play-pause-btn" class="control-button" title="Play/Pause">
+                    <!-- Play Icon SVG -->
+                    <svg id="play-icon" class="icon" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+                    </svg>
+                    <!-- Pause Icon SVG (initially hidden) -->
+                    <svg id="pause-icon" class="icon" style="display: none;" viewBox="0 0 24 24">
+                        <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+
+                <!-- 10s Backward Seek Button -->
+                <button id="seek-back-btn" class="control-button" title="-10 Seconds">
+                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Back10Medium" data-icon-id=":r9h:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/></svg>
+                </button>
+
+                <!-- 10s Forward Seek Button -->
+                <button id="seek-forward-btn" class="control-button" title="+10 Seconds">
+                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Forward10Medium" data-icon-id=":r9i:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6" clip-rule="evenodd"/></svg>
+                </button>
+
+                <!-- Volume Control (LEFT side) -->
+                <div class="volume-control-group">
+                    <button id="mute-btn" class="control-button" title="Mute/Unmute">
+                        <!-- Volume High Icon SVG (New speaker icon) -->
+                        <svg id="volume-high-icon" class="icon" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7L9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
+                        </svg>
+                        <!-- Volume Mute Icon SVG (Updated with user's specific icon) -->
+                        <svg id="volume-mute-icon" class="icon" style="display: none;" width="24" height="24" fill="none" aria-hidden="true" data-icon="VolumeOffMedium" data-icon-id=":r9j:" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7L9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <input type="range" id="volume-bar" min="0" max="1" value="0.5" step="0.01">
+                </div>
+
+                <!-- Playback Speed Button (Toggles Menu) - Pushed to the right using margin-left: auto -->
+                <div id="speed-menu-container" class="menu-container" style="margin-left: auto;">
+                    <button id="speed-btn" class="control-button" title="Playback Speed">
+                        <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="InternetSpeedMedium" data-icon-id=":r9l:" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd" d="M19.06 6.27a9.7 9.7 0 0 0-14.12 0 10.8 10.8 0 0 0 0 14.82L3.5 22.47a12.8 12.8 0 0 1 0-17.59 11.7 11.7 0 0 1 17 0 12.8 12.8 0 0 1 0 17.59l-1.44-1.38a10.8 10.8 0 0 0 0-14.82M15 14a3 3 0 1 1-1.7-2.7l3-3 1.4 1.4-3 3q.3.6.3 1.3" clip-rule="evenodd"/>
+                        </svg>
+                        Speed: <span id="current-speed-display">1.0x</span>
+                    </button>
+                </div>
+                
+                <!-- Settings/Tracks Button (Toggles Menu) -->
+                <div class="menu-container">
+                    <button id="settings-btn" class="control-button" title="Audio & Subtitle Tracks">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd" d="M1 3a1 1 0 0 1 1-1h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3a1 1 0 0 1-1.55.83L11.7 18H2a1 1 0 0 1-1-1zm2 1v12h9.3l.25.17L17 19.13V16h4V4zm7 5H5V7h5zm9 2h-5v2h5zm-7 2H5v-2h7zm7-6h-7v2h7z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+
+
+                <!-- Fullscreen Button -->
+                <button id="fullscreen-btn" class="control-button" title="Toggle Fullscreen">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="config-area">
+            <div class="url-input-group">
+                <input type="text" id="m3u8-url" placeholder="Paste your .m3u8 link here" value="https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8">
+                <button id="load-button">Load Stream</button>
+            </div>
+            <p class="status-message" id="status-message">Ready to load stream.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('hls-video');
+            const videoWrapper = document.querySelector('.video-wrapper'); // Used for mouse/touch tracking
+            const urlInput = document.getElementById('m3u8-url');
+            const loadButton = document.getElementById('load-button');
+            const statusMessage = document.getElementById('status-message');
+            
+            // Bottom Controls
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            
+            // Center Controls
+            const centerPlayPauseBtn = document.getElementById('center-play-pause-btn');
+            const centerPlayIcon = document.getElementById('center-play-icon');
+            const centerPauseIcon = document.getElementById('center-pause-icon');
+
+            const muteBtn = document.getElementById('mute-btn');
+            const volumeHighIcon = document.getElementById('volume-high-icon');
+            const volumeMuteIcon = document.getElementById('volume-mute-icon');
+            const volumeBar = document.getElementById('volume-bar');
+            const seekBar = document.getElementById('seek-bar');
+            const seekBarContainer = document.querySelector('.seek-bar-container'); // The click target for seeking
+            const timeDisplay = document.getElementById('time-display');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const playerContainer = document.querySelector('.player-container');
+            const seekBackBtn = document.getElementById('seek-back-btn');
+            const seekForwardBtn = document.getElementById('seek-forward-btn');
+            
+            // Menu Elements
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsMenu = document.getElementById('settings-menu');
+            const speedBtn = document.getElementById('speed-btn');
+            const speedMenu = document.getElementById('speed-menu');
+            const currentSpeedDisplay = document.getElementById('current-speed-display');
+
+            // Track List Elements (for Settings Menu)
+            const audioTrackList = document.getElementById('audio-track-list');
+            const subtitleTrackList = document.getElementById('subtitle-track-list');
+            // Speed List Element (for Speed Menu)
+            const speedList = document.getElementById('speed-list');
+            
+            let hls = null;
+            let controlTimeout; // Timer for hiding controls
+            let isSeeking = false; // State to prevent timeupdate from overriding seek input
+            let lastVolume = 0.5; 
+
+            // UPDATED SPEED OPTIONS for the horizontal slider
+            const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5];
+
+            // Set initial video size
+            video.style.height = '450px';
+
+            /**
+             * Updates the custom CSS property for the progress bar's track fill (Netflix Red).
+             */
+            function updateSeekBarProgress(currentTime) {
+                const duration = video.duration;
+                if (!isNaN(duration) && duration > 0) {
+                    const percent = (currentTime / duration) * 100;
+                    // This CSS variable is used in the range input's ::-webkit-slider-runnable-track style
+                    seekBar.style.setProperty('--webkit-progress-percent', `${percent}%`);
+                } else {
+                    seekBar.style.setProperty('--webkit-progress-percent', `0%`);
+                }
+            }
+            
+            /**
+             * Updates the custom CSS property for the volume bar's track fill (Red).
+             */
+            function updateVolumeBarProgress(volume) {
+                // Volume is a value between 0 and 1
+                const percent = volume * 100;
+                // This CSS variable is used in the volume bar's ::-webkit-slider-runnable-track style
+                volumeBar.style.setProperty('--webkit-volume-percent', `${percent}%`);
+            }
+
+            /**
+             * Utility to format time from seconds to MM:SS
+             */
+            function formatTime(seconds) {
+                if (isNaN(seconds) || seconds < 0) return '00:00';
+                const absSeconds = Math.abs(seconds);
+                const minutes = Math.floor(absSeconds / 60);
+                const remainingSeconds = Math.floor(absSeconds % 60);
+                const paddedMinutes = String(minutes).padStart(2, '0');
+                const paddedSeconds = String(remainingSeconds).padStart(2, '0');
+                return `${paddedMinutes}:${paddedSeconds}`;
+            }
+
+            /**
+             * Updates the status message in the UI.
+             */
+            function updateStatus(message, type = 'info') {
+                statusMessage.textContent = message;
+                statusMessage.className = 'status-message'; // Reset classes
+                if (type !== 'info') {
+                    statusMessage.classList.add(type);
+                }
+            }
+            
+            // --- CONTROL HIDING LOGIC ---
+
+            function hideControls() {
+                if (!video.paused) {
+                    playerContainer.classList.add('controls-hidden');
+                    // Ensure menus are closed when controls hide
+                    settingsMenu.classList.add('hidden');
+                    speedMenu.classList.add('hidden');
+                }
+            }
+
+            function showControls() {
+                playerContainer.classList.remove('controls-hidden');
+            }
+
+            /**
+             * Resets the timer to hide controls after 3 seconds of inactivity, 
+             * and ensures controls are visible.
+             */
+            function resetControlTimer() {
+                clearTimeout(controlTimeout);
+                showControls();
+
+                // Only set the timer if the video is currently playing
+                if (!video.paused) {
+                    controlTimeout = setTimeout(hideControls, 3000); 
+                }
+            }
+
+            // Event listeners for control hiding/showing
+            videoWrapper.addEventListener('mousemove', resetControlTimer);
+            videoWrapper.addEventListener('touchstart', resetControlTimer);
+            
+            // On mouse leave, start timer immediately
+            videoWrapper.addEventListener('mouseleave', () => {
+                if (!video.paused) {
+                    clearTimeout(controlTimeout);
+                    controlTimeout = setTimeout(hideControls, 500); 
+                }
+            });
+
+            // Keep controls visible when paused
+            video.addEventListener('pause', showControls);
+            // Hide controls when playing (and start the timer)
+            video.addEventListener('play', resetControlTimer);
+
+
+            // --- MENU TOGGLE LOGIC (Shared for Speed and Settings) ---
+            
+            /**
+             * Toggles visibility for a specific menu and ensures the other is closed.
+             * @param {HTMLElement} menuToToggle - The menu element to show/hide.
+             * @param {HTMLElement} otherMenu - The other menu element to ensure is closed.
+             */
+            function toggleMenu(menuToToggle, otherMenu) {
+                // Ensure controls are visible when a menu is open
+                clearTimeout(controlTimeout); // Stop the hiding timer
+                showControls(); 
+                
+                const isHidden = menuToToggle.classList.contains('hidden');
+                
+                // 1. Always hide the other menu
+                otherMenu.classList.add('hidden');
+
+                // 2. Toggle the requested menu
+                if (isHidden) {
+                    menuToToggle.classList.remove('hidden');
+                    // CRITICAL FIX: Ensure tracks are loaded/re-rendered when the settings menu is OPENED
+                    if (menuToToggle === settingsMenu) {
+                        loadHlsTracks();
+                    }
+                } else {
+                    menuToToggle.classList.add('hidden');
+                    // If closing the menu, restart the hide timer (only if playing)
+                    if (!video.paused) {
+                         controlTimeout = setTimeout(hideControls, 500);
+                    }
+                }
+            }
+            
+            // Event listeners for menu buttons
+            settingsBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleMenu(settingsMenu, speedMenu);
+            });
+
+            speedBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleMenu(speedMenu, settingsMenu);
+            });
+
+            // Global click handler to close menus when clicking outside
+            document.addEventListener('click', (event) => {
+                // Check if the click occurred outside both menu elements AND their toggle buttons
+                const isClickOutsideSettings = !settingsMenu.contains(event.target) && event.target !== settingsBtn;
+                const isClickOutsideSpeed = !speedMenu.contains(event.target) && event.target !== speedBtn;
+
+                if (settingsMenu && isClickOutsideSettings) {
+                    settingsMenu.classList.add('hidden');
+                }
+                if (speedMenu && isClickOutsideSpeed) {
+                    speedMenu.classList.add('hidden');
+                }
+                
+                // If we closed a menu, reset the timer
+                if (isClickOutsideSettings && isClickOutsideSpeed) {
+                    resetControlTimer(); 
+                }
+            });
+
+            // --- SPEED MENU IMPLEMENTATION ---
+
+            function updatePlaybackRate(rate) {
+                video.playbackRate = rate;
+                currentSpeedDisplay.textContent = `${rate.toFixed(2)}x`.replace('.00', '.0');
+                
+                // Update active class in the menu
+                document.querySelectorAll('#speed-list .speed-option-wrapper').forEach(option => {
+                    option.classList.remove('active');
+                    if (parseFloat(option.dataset.speed) === rate) {
+                        option.classList.add('active');
+                    }
+                });
+                // After selection, close the menu and reset timer
+                speedMenu.classList.add('hidden');
+                resetControlTimer();
+            }
+
+            // Dynamically populate the speed menu with the new horizontal structure
+            function populateSpeedMenu() {
+                speedList.innerHTML = '';
+                
+                const trackDiv = document.createElement('div');
+                trackDiv.className = 'speed-track';
+                
+                SPEED_OPTIONS.forEach(rate => {
+                    const rateText = `${rate.toFixed(2)}x`.replace('.00', '.0');
+                    
+                    const optionWrapper = document.createElement('div');
+                    optionWrapper.className = 'speed-option-wrapper';
+                    optionWrapper.dataset.speed = rate;
+
+                    const dot = document.createElement('div');
+                    dot.className = 'speed-dot';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'speed-label';
+                    label.textContent = rateText;
+
+                    optionWrapper.appendChild(dot);
+                    optionWrapper.appendChild(label);
+
+                    optionWrapper.addEventListener('click', () => {
+                        updatePlaybackRate(rate);
+                    });
+
+                    trackDiv.appendChild(optionWrapper);
+                });
+
+                speedList.appendChild(trackDiv); 
+
+                // Set initial rate display and active state
+                updatePlaybackRate(video.playbackRate || 1.0); 
+            }
+
+            // --- TRACK SELECTION LOGIC (for Settings Menu) ---
+
+            /**
+             * Renders a list of tracks (audio or subtitle) into the UI element.
+             */
+            function renderTrackList(element, tracks, activeListIndex, type) {
+                element.innerHTML = '';
+                
+                // The HLS object must exist to proceed with track data, otherwise show loading
+                if (!hls || hls.subtitleTracks.length === 0) {
+                    if (type === 'subtitle') {
+                         element.innerHTML = `<li class="menu-item" style="cursor: default;">Loading subtitles...</li>`;
+                         return;
+                    }
+                }
+                
+                if (tracks.length === 0) {
+                    element.innerHTML = `<li class="menu-item" style="cursor: default;">No ${type} tracks found.</li>`;
+                    return;
+                }
+
+                tracks.forEach((track, index) => {
+                    const li = document.createElement('li');
+                    
+                    let label = track.name || track.lang || `Track ${index}`;
+                    if (type === 'subtitle' && track.id === -1) {
+                        label = 'Subtitles Off';
+                    } else if (track.forced) {
+                        // Mark forced tracks in the UI
+                        label += ' (Forced)';
+                    }
+
+
+                    li.textContent = label;
+                    li.className = 'menu-item';
+                    // We use the index in the *local UI list* for the data attribute
+                    li.dataset.index = index; 
+                    li.dataset.type = type;
+
+                    if (index === activeListIndex) {
+                        li.classList.add('active');
+                        const status = document.createElement('span');
+                        status.textContent = '✓';
+                        li.appendChild(status);
+                    }
+
+                    li.addEventListener('click', () => {
+                        const listIndex = parseInt(li.dataset.index, 10);
+                        let trackName = label;
+
+                        if (type === 'audio') {
+                            if (hls && listIndex !== hls.audioTrack) {
+                                hls.audioTrack = listIndex;
+                                updateStatus(`Audio track switched to: ${trackName}`, 'success');
+                            }
+                        } else if (type === 'subtitle') {
+                            // Subtitle tracks map:
+                            // UI Index 0 -> HLS Index -1 (Off)
+                            // UI Index 1 -> HLS Index 0
+                            // UI Index 2 -> HLS Index 1, etc.
+                            const hlsTrackIndex = listIndex - 1; 
+
+                            if (hls && hlsTrackIndex !== hls.subtitleTrack) {
+                                hls.subtitleTrack = hlsTrackIndex;
+                                updateStatus(`Subtitle track switched to: ${trackName}`, 'success');
+                                
+                                // HLS.js handles the video's textTracks, but for robustness
+                                // we can hide all and show the one corresponding to the selected HLS track.
+                                Array.from(video.textTracks).forEach((track, i) => {
+                                    if (i === hlsTrackIndex) {
+                                        track.mode = 'showing';
+                                    } else {
+                                        track.mode = 'hidden';
+                                    }
+                                });
+                            }
+                        }
+                        
+                        loadHlsTracks(); // Re-render to show new active track
+                        settingsMenu.classList.add('hidden');
+                        resetControlTimer(); 
+                    });
+                    element.appendChild(li);
+                });
+            }
+
+            /**
+             * Fetches tracks from HLS.js and triggers the rendering of the settings menu.
+             * It checks if hls is ready before attempting to read track data.
+             */
+            function loadHlsTracks() {
+                if (!hls || !hls.subtitleTracks) {
+                     // Still waiting for manifest to parse, show loading state
+                     audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading audio tracks...</li>';
+                     subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading subtitles...</li>';
+                     return;
+                }
+
+                // --- Audio Tracks ---
+                if (hls.audioTracks && hls.audioTracks.length > 0) {
+                    renderTrackList(audioTrackList, hls.audioTracks, hls.audioTrack, 'audio');
+                } else {
+                    audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Single audio track available.</li>';
+                }
+
+                // --- Subtitle Tracks ---
+                if (hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+                    // Prepare list for rendering (add 'Subtitles Off' as the first UI item)
+                    const subtitleTracksWithOff = [{name: 'Subtitles Off', lang: 'off', id: -1, forced: false}, ...hls.subtitleTracks];
+                    
+                    // hls.subtitleTrack = -1 (Off) corresponds to index 0 in subtitleTracksWithOff
+                    // hls.subtitleTrack = 0 (first real track) corresponds to index 1, etc.
+                    const activeListIndex = hls.subtitleTrack === -1 ? 0 : hls.subtitleTrack + 1; 
+                    
+                    renderTrackList(subtitleTrackList, subtitleTracksWithOff, activeListIndex, 'subtitle');
+                } else {
+                    // Only show 'Subtitles Off' option if no tracks exist
+                    const offTrackOnly = [{name: 'Subtitles Off', lang: 'off', id: -1, forced: false}];
+                    // Ensure hls.subtitleTrack is -1 in case no tracks were found
+                    hls.subtitleTrack = -1; 
+                    const activeListIndex = 0; 
+                    renderTrackList(subtitleTrackList, offTrackOnly, activeListIndex, 'subtitle');
+                }
+            }
+
+
+            // --- HLS Stream Loading Logic ---
+            function loadHlsStream(hlsUrl) {
+                if (hls) {
+                    hls.destroy();
+                    hls = null;
+                }
+                
+                seekBar.value = 0;
+                timeDisplay.textContent = '00:00';
+                updateSeekBarProgress(0); // Reset seek progress color
+                showControls(); // Ensure controls are visible on load
+                
+                // CRITICAL: Immediately clear menus and show loading state
+                audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading audio tracks...</li>';
+                subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading subtitles...</li>';
+
+                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = hlsUrl;
+                    
+                    // Native HLS path: Cannot provide track selection, so set appropriate message
+                    audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Not available (Native HLS).</li>';
+                    subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Not available (Native HLS).</li>';
+
+                    video.addEventListener('loadedmetadata', () => {
+                        video.play().catch(e => {
+                            console.warn("Autoplay was prevented by browser (Native HLS).", e);
+                            updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
+                        });
+                        updateStatus('Stream loaded and playing (Native HLS).', 'success');
+                    }, { once: true });
+                } 
+                else if (Hls.isSupported()) {
+                    hls = new Hls();
+                    
+                    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                        updateStatus('Media attached. Loading source...', 'info');
+                        hls.loadSource(hlsUrl);
+                    });
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        // Tracks are available, run selection logic and populate the lists
+                        loadHlsTracks(); 
+                        video.play().then(() => {
+                            updateStatus('Manifest parsed. Playback started automatically.', 'success');
+                        }).catch(e => {
+                            console.warn("Autoplay was prevented by browser (HLS.js).", e);
+                            updateStatus('Manifest parsed. Press Play to start.', 'info');
+                        });
+                    });
+
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS.js Error Event:', data);
+                        const errorMsg = `HLS.js Error: ${data.details}. Fatal: ${data.fatal}. Check console for details.`;
+
+                        if (data.fatal) {
+                            updateStatus(errorMsg, 'error');
+                            hls.destroy();
+                            hls = null;
+                            updateStatus('Playback failed. Check the M3U8 link or network connection.', 'error');
+                        }
+                    });
+
+                    hls.attachMedia(video);
+                } 
+                else {
+                    updateStatus('HLS is not supported in this browser. Please use a modern browser.', 'error');
+                }
+            }
+
+            // --- Robust Seeking Logic ---
+
+            /**
+             * Calculates new video time based on mouse/touch position and updates UI.
+             * @param {object} e - The mouse or touch event object.
+             * @returns {number} The calculated new time.
+             */
+            function calculateSeekTime(e) {
+                const rect = seekBarContainer.getBoundingClientRect();
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+
+                // Calculate the position relative to the container (0.0 to 1.0)
+                let clickPosition = (clientX - rect.left) / rect.width;
+                clickPosition = Math.max(0, Math.min(1, clickPosition));
+
+                const newTime = video.duration * clickPosition;
+
+                // Update the visual progress bar and time display immediately
+                seekBar.value = newTime;
+                updateSeekBarProgress(newTime);
+                
+                const duration = video.duration || 0;
+                const remainingTime = duration - newTime;
+                timeDisplay.textContent = '-' + formatTime(remainingTime);
+                
+                return newTime;
+            }
+
+
+            // Start dragging/seeking when mouse is pressed down on the progress bar container
+            seekBarContainer.addEventListener('mousedown', (e) => {
+                // Ignore if video duration is not available or infinite (live stream)
+                if (isNaN(video.duration) || video.duration === Infinity) return;
+                isSeeking = true;
+                video.pause();
+                
+                clearTimeout(controlTimeout); 
+                showControls();
+
+                const newTime = calculateSeekTime(e);
+                video.currentTime = newTime;
+            });
+
+            // While dragging, constantly update the time
+            window.addEventListener('mousemove', (e) => {
+                if (isSeeking && video.duration) {
+                    e.preventDefault(); 
+                    const newTime = calculateSeekTime(e);
+                    video.currentTime = newTime; 
+                }
+            });
+
+            // Stop dragging and let the video resume (or stay paused)
+            window.addEventListener('mouseup', () => {
+                if (isSeeking) {
+                    isSeeking = false;
+                    // Resume playback if it was paused only for seeking
+                    if (video.paused && video.currentTime > 0 && !video.ended) {
+                        video.play().catch(e => console.warn("Play resume failed after seek.", e)); 
+                    }
+                    resetControlTimer(); 
+                }
+            });
+
+            // Handle touch events for mobile seeking
+            seekBarContainer.addEventListener('touchstart', (e) => {
+                if (isNaN(video.duration) || video.duration === Infinity) return;
+                isSeeking = true;
+                video.pause();
+                
+                clearTimeout(controlTimeout);
+                showControls();
+
+                const newTime = calculateSeekTime(e);
+                video.currentTime = newTime;
+            }, {passive: true}); 
+
+            window.addEventListener('touchmove', (e) => {
+                if (isSeeking && video.duration) {
+                    // Touchmove on window is usually passive, so avoid preventDefault
+                    const newTime = calculateSeekTime(e);
+                    video.currentTime = newTime;
+                }
+            });
+
+            window.addEventListener('touchend', () => {
+                if (isSeeking) {
+                    isSeeking = false;
+                    if (video.paused && video.currentTime > 0 && !video.ended) {
+                        video.play().catch(e => console.warn("Play resume failed after touch seek.", e));
+                    }
+                    resetControlTimer();
+                }
+            });
+
+
+            // --- Custom Control Logic (Volume and Playback) ---
+            
+            // Volume control state: Track the last non-zero volume
+            lastVolume = video.volume || 0.5;
+
+            // Global Play/Pause Toggle Function (used by buttons and video click)
+            function togglePlayPause() {
+                if (video.paused || video.ended) {
+                    video.play().catch(e => {
+                        if (e.name !== 'AbortError') {
+                             console.error("Play failed: Make sure user interaction triggered the play call.", e);
+                        }
+                    });
+                } else {
+                    video.pause();
+                }
+                resetControlTimer();
+            }
+
+            // Click anywhere on the video element to toggle play/pause
+            video.addEventListener('click', togglePlayPause);
+
+            // Bottom Play/Pause Button Click
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            
+            // Center Play/Pause Button Click
+            centerPlayPauseBtn.addEventListener('click', togglePlayPause);
+
+
+            // Video events to update ALL Play/Pause button states
+            video.addEventListener('play', () => {
+                // Bottom Button
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'inline';
+                
+                // Center Button (Hide it and switch to pause icon)
+                centerPlayPauseBtn.classList.add('playing-hide-center');
+                centerPlayIcon.style.display = 'none';
+                centerPauseIcon.style.display = 'inline';
+            });
+
+            video.addEventListener('pause', () => {
+                // Bottom Button
+                playIcon.style.display = 'inline';
+                pauseIcon.style.display = 'none';
+                
+                // Center Button (Show it and switch to play icon)
+                centerPlayPauseBtn.classList.remove('playing-hide-center');
+                centerPlayIcon.style.display = 'inline';
+                centerPauseIcon.style.display = 'none';
+            });
+            
+            // FIX: Mute/Unmute Logic to synchronize the slider thumb
+            muteBtn.addEventListener('click', () => {
+                if (!video.muted) {
+                    // 1. Muting: Store current volume, set visual slider and video volume to 0
+                    const currentVolume = parseFloat(volumeBar.value);
+                    if (currentVolume > 0.05) {
+                        lastVolume = currentVolume; // Store the last good volume
+                    }
+                    video.volume = 0;
+                    video.muted = true;
+                    
+                    // CRITICAL FIX: Set the range input's value to 0 to move the thumb
+                    volumeBar.value = 0; 
+                    updateVolumeBarProgress(0);
+
+                    volumeHighIcon.style.display = 'none';
+                    volumeMuteIcon.style.display = 'inline';
+
+                } else {
+                    // 2. Unmuting: Restore to lastVolume, or 0.5 default
+                    video.muted = false;
+                    const restoreVolume = lastVolume > 0.05 ? lastVolume : 0.5;
+                    video.volume = restoreVolume;
+                    
+                    // CRITICAL FIX: Set the range input's value to restoreVolume
+                    volumeBar.value = restoreVolume; 
+                    updateVolumeBarProgress(restoreVolume);
+
+                    volumeHighIcon.style.display = 'inline';
+                    volumeMuteIcon.style.display = 'none';
+                }
+                resetControlTimer();
+            });
+            
+            // FIX: Volume Bar Input Logic
+            volumeBar.addEventListener('input', () => {
+                const newVolume = parseFloat(volumeBar.value);
+                
+                // 1. Update video properties
+                video.volume = newVolume;
+                
+                // 2. Manage Mute state and lastVolume
+                if (newVolume === 0) {
+                    video.muted = true;
+                    // Note: We don't update lastVolume here, we keep the previous setting
+                    volumeHighIcon.style.display = 'none';
+                    volumeMuteIcon.style.display = 'inline';
+                } else {
+                    video.muted = false;
+                    lastVolume = newVolume; // Update lastVolume
+                    volumeHighIcon.style.display = 'inline';
+                    volumeMuteIcon.style.display = 'none';
+                }
+
+                // 3. Update visual progress fill
+                updateVolumeBarProgress(newVolume);
+                
+                resetControlTimer();
+            });
+
+            // Seek Forward/Backward logic
+            function seekJump(seconds) {
+                if (video.readyState > 0) {
+                    video.currentTime = Math.max(0, video.currentTime + seconds);
+                }
+                resetControlTimer();
+            }
+            seekBackBtn.addEventListener('click', () => seekJump(-10));
+            seekForwardBtn.addEventListener('click', () => seekJump(10));
+
+            // Update Time Display and Seek Bar
+            video.addEventListener('loadedmetadata', () => {
+                seekBar.max = video.duration;
+                const duration = video.duration || 0;
+                timeDisplay.textContent = '-' + formatTime(duration);
+                updateSeekBarProgress(0); 
+                
+                // Also ensures the center button is visible on load/metadata
+                video.pause(); 
+            });
+
+            video.addEventListener('timeupdate', () => {
+                // CRITICAL: Only update the progress bar from the video events if we are NOT currently seeking (dragging)
+                if (!isSeeking && video.duration > 0) {
+                    seekBar.value = video.currentTime;
+                    updateSeekBarProgress(video.currentTime);
+                }
+                
+                const duration = video.duration || 0;
+                const currentTime = video.currentTime || 0;
+                const remainingTime = duration - currentTime;
+                
+                // Show only remaining time, prefixed with a dash
+                timeDisplay.textContent = '-' + formatTime(remainingTime);
+            });
+
+            // Fullscreen
+            fullscreenBtn.addEventListener('click', () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else if (playerContainer.requestFullscreen) {
+                    playerContainer.requestFullscreen();
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    playerContainer.webkitRequestFullscreen();
+                } else if (playerContainer.msRequestFullscreen) {
+                    playerContainer.msRequestFullscreen();
+                }
+                resetControlTimer(); 
+            });
+
+
+            // --- Initialization ---
+
+            loadButton.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                if (url) {
+                    updateStatus('Loading stream...', 'info');
+                    loadHlsStream(url);
+                } else {
+                    updateStatus('Please enter a valid M3U8 URL.', 'error');
+                }
+            });
+
+            // Initial stream load
+            if (urlInput.value) {
+                updateStatus('Loading stream...', 'info');
+                loadHlsStream(urlInput.value);
+            }
+
+            // Populate the speed menu on load
+            populateSpeedMenu();
+            
+            // Initial volume setup
+            video.volume = 0.5; // Ensure video starts at a reasonable volume
+            volumeBar.value = video.volume; // Sync slider
+            lastVolume = video.volume; // Initialize lastVolume
+            updateVolumeBarProgress(video.volume); // Initial call to set red track fill
+
+            // Initial call to set timer and state (ensures controls are visible on load)
+            resetControlTimer();
+            
+            // Set initial state for center button (should be play icon visible)
+            centerPlayIcon.style.display = 'inline';
+            centerPauseIcon.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
