@@ -122,20 +122,34 @@
                             </svg>
                         </button>
 
-                        <!-- MUTE/UNMUTE Button -->
-                        <button id="mute-button" 
-                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
-                            
-                            <!-- Volume ON Icon (Visible when UNMUTED) -->
-                            <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
-                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
-                            </svg>
-                            
-                            <!-- Volume OFF Icon (Visible when MUTED) -->
-                            <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
-                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
+                        <!-- MUTE/UNMUTE Button & Volume Slider Wrapper -->
+                        <div id="volume-control-wrapper" class="relative flex items-center h-12">
+                            <!-- Volume Slider Container (Hidden by default, shows on hover) -->
+                            <div id="volume-slider-container" class="absolute bottom-16 -left-3 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
+                                <!-- Vertical Slider Track -->
+                                <div id="volume-slider" class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
+                                    <!-- Volume Level Indicator (Red) -->
+                                    <div id="volume-level" class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full" style="height: 100%;"></div>
+                                    <!-- Volume Thumb (Red) -->
+                                    <div id="volume-thumb-control" class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100" style="bottom: 0;"></div>
+                                </div>
+                            </div>
+
+                            <!-- MUTE/UNMUTE Button -->
+                            <button id="mute-button" 
+                                    class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
+                                
+                                <!-- Volume ON Icon (Visible when UNMUTED) -->
+                                <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
+                                    <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
+                                </svg>
+                                
+                                <!-- Volume OFF Icon (Visible when MUTED) -->
+                                <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
+                                    <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- RIGHT SIDE: Fullscreen Button -->
@@ -178,10 +192,17 @@
         const playIcon = document.getElementById('play-icon');
         const pauseIcon = document.getElementById('pause-icon');
         
-        // Mute/Volume Elements (NEW)
+        // Mute/Volume Elements
+        const volumeControlWrapper = document.getElementById('volume-control-wrapper'); // NEW Wrapper for hover
         const muteButton = document.getElementById('mute-button');
         const volumeOnIcon = document.getElementById('volume-on-icon');
         const volumeOffIcon = document.getElementById('volume-off-icon');
+
+        // Volume Slider Elements (NEW)
+        const volumeSliderContainer = document.getElementById('volume-slider-container');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeLevel = document.getElementById('volume-level');
+        const volumeThumbControl = document.getElementById('volume-thumb-control');
 
         // Elements for progress bar and time display
         const seekBar = document.getElementById('seek-bar');
@@ -203,7 +224,9 @@
 
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 3000; // 3 seconds
-        let isSeeking = false; // Flag to track if the user is dragging the thumb
+        let isSeeking = false; // Flag to track if the user is dragging the seek bar
+        let isVolumeAdjusting = false; // NEW: Flag to track if the user is dragging the volume slider
+        let lastKnownVolume = 0.5; // NEW: Store volume before mute
 
         /**
          * Utility function to display an error message to the user.
@@ -274,9 +297,9 @@
             }
         }
 
-        /** Updates the Mute/Unmute icon based on video state (NEW) */
+        /** Updates the Mute/Unmute icon based on video state */
         function updateMuteIcon() {
-            if (video.muted) {
+            if (video.muted || video.volume === 0) {
                 volumeOnIcon.classList.add('hidden');
                 volumeOffIcon.classList.remove('hidden');
             } else {
@@ -290,10 +313,107 @@
             clearTimeout(inactivityTimer);
             showControls(); // Always show the controls on any mouse/touch activity
             
-            if (!video.paused && !isSeeking) {
-                // If the video is playing and not actively seeking, start the timer
+            if (!video.paused && !isSeeking && !isVolumeAdjusting) {
+                // If the video is playing and not actively seeking or adjusting volume, start the timer
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
+        }
+
+        // --- Volume Slider Logic (NEW) ---
+
+        /** Updates the visual state of the vertical volume slider */
+        function updateVolumeSlider() {
+            // Use 0 if muted, otherwise use current volume
+            const volume = video.muted ? 0 : video.volume; 
+            const percent = volume * 100;
+            
+            volumeLevel.style.height = `${percent}%`;
+            volumeThumbControl.style.bottom = `calc(${percent}% - 8px)`; // 8px = half of thumb height (16px)
+            
+            updateMuteIcon();
+        }
+
+        /** Calculates new volume based on vertical position */
+        function calculateNewVolume(clientY) {
+            const rect = volumeSlider.getBoundingClientRect();
+            
+            // Calculate distance from bottom of slider (vertical inverse of seek bar)
+            let distance = rect.bottom - clientY;
+            
+            // Clamp distance within the slider bounds (0 to rect.height)
+            if (distance < 0) distance = 0;
+            if (distance > rect.height) distance = rect.height;
+
+            const volumeRatio = distance / rect.height;
+            
+            // Return volume level (0.0 to 1.0)
+            return Math.max(0, Math.min(1, volumeRatio)); 
+        }
+
+        function handleVolumeAdjust(event) {
+            // Prevent the browser from selecting text during drag
+            event.preventDefault(); 
+            
+            // Get clientY from mouse or touch event
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+            const newVolume = calculateNewVolume(clientY);
+            
+            // Set the video volume
+            video.volume = newVolume;
+            
+            // If volume is > 0, ensure we are unmuted
+            if (newVolume > 0) {
+                video.muted = false;
+                lastKnownVolume = newVolume;
+            }
+            
+            // Update the visual representation
+            updateVolumeSlider(); 
+        }
+
+        function startVolumeAdjusting(event) {
+            isVolumeAdjusting = true;
+            event.preventDefault(); // Prevent default touch actions/seeking
+            
+            // Start listening for drag movement
+            window.addEventListener('mousemove', handleVolumeAdjust);
+            window.addEventListener('mouseup', endVolumeAdjusting);
+            
+            window.addEventListener('touchmove', handleVolumeAdjust);
+            window.addEventListener('touchend', endVolumeAdjusting);
+            
+            // Adjust volume immediately on mousedown
+            handleVolumeAdjust(event);
+        }
+
+        function endVolumeAdjusting() {
+            if (!isVolumeAdjusting) return;
+            isVolumeAdjusting = false;
+            
+            // Stop listening for drag movement
+            window.removeEventListener('mousemove', handleVolumeAdjust);
+            window.removeEventListener('mouseup', endVolumeAdjusting);
+            
+            window.removeEventListener('touchmove', handleVolumeAdjust);
+            window.removeEventListener('touchend', endVolumeAdjusting);
+
+            // Resume timer for hiding controls
+            resetInactivityTimer();
+        }
+        
+        /** Toggles the Mute/Unmute state, preserving the last volume level. */
+        function toggleMute() {
+            if (video.muted) {
+                // UNMUTE: Restore last known volume, ensuring it's not 0
+                video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
+                video.muted = false;
+            } else {
+                // MUTE: Save current volume, then mute
+                lastKnownVolume = video.volume;
+                video.muted = true;
+            }
+            updateVolumeSlider();
+            resetInactivityTimer();
         }
 
         // --- Seeking Logic ---
@@ -417,14 +537,6 @@
             }
         }
         
-        // --- Mute/Unmute Logic (NEW) ---
-        function toggleMute() {
-            video.muted = !video.muted;
-            updateMuteIcon();
-            resetInactivityTimer();
-        }
-
-
         // --- Event Handlers Setup ---
 
         function setupInactivityDetection() {
@@ -443,18 +555,34 @@
             fullscreenButton.addEventListener('click', toggleFullscreen); 
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
-            muteButton.addEventListener('click', toggleMute); // NEW Mute/Unmute handler
+            muteButton.addEventListener('click', toggleMute); 
             
             // 4. Progress Bar Seeking Events
             seekBar.addEventListener('mousedown', startSeeking);
             seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
+            
+            // 5. Volume Slider Events (NEW)
+            volumeSlider.addEventListener('mousedown', startVolumeAdjusting);
+            volumeSlider.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
+            
+            // 6. Volume Slider Visibility (NEW)
+            volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
+            // Use a short delay before hiding, giving time for the cursor to move to the slider
+            volumeControlWrapper.addEventListener('mouseleave', () => {
+                 setTimeout(() => {
+                    if (!isVolumeAdjusting) {
+                        volumeSliderContainer.classList.add('hidden');
+                    }
+                 }, 300);
+            });
 
-            // 5. System Listeners
+            // 7. System Listeners
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
-            // 6. Video state listeners
+            // 8. Video state listeners
             video.addEventListener('timeupdate', updateProgress);
             video.addEventListener('loadedmetadata', updateProgress);
+            video.addEventListener('volumechange', updateVolumeSlider); // Update slider/icons if volume changes programmatically
 
             video.addEventListener('pause', () => {
                 showControls(); // Keep controls visible when paused
@@ -473,9 +601,15 @@
             });
 
             // Initial state setup
+            // If the video starts muted (autoplay default), set a default volume for when it's unmuted
+            if(video.volume === 0) {
+                lastKnownVolume = 0.5;
+            } else {
+                lastKnownVolume = video.volume;
+            }
             updateProgress();
+            updateVolumeSlider(); // Initial volume position
             updateFullscreenIcon(); 
-            updateMuteIcon(); // Set initial mute icon
             if (video.paused || video.ended) {
                 showControls();
                 togglePlayPauseIcon(true);
