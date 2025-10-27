@@ -51,6 +51,18 @@
         #volume-slider-track {
             background: #ffffff33; /* white/30 */
         }
+        
+        /* Custom scrollbar for track menus */
+        #audio-tracks-container::-webkit-scrollbar,
+        #subtitle-tracks-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #audio-tracks-container::-webkit-scrollbar-thumb,
+        #subtitle-tracks-container::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -72,13 +84,14 @@
 <div id="center-play-pause-overlay" 
              class="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
             <button id="center-play-pause-button" 
-                    class="text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-all duration-200 focus:outline-none">
+                    class="text-white bg-black/50 rounded-full p-3 md:p-4 hover:bg-black/70 transition-all duration-200 focus:outline-none">
                 
-<svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" aria-hidden="true" viewBox="0 0 24 24">
+                
+<svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
                 </svg>
                 
-<svg id="center-pause-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" aria-hidden="true" class="hidden" viewBox="0 0 24 24">
+<svg id="center-pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="hidden w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
                     <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
                 </svg>
             </button>
@@ -90,10 +103,10 @@
              class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
             
             
-<div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3 pointer-events-auto">
+<div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-3 md:p-6 flex flex-col space-y-2 md:space-y-3 pointer-events-auto">
                 
                 
-<div id="timeline-row" class="flex items-center space-x-4 w-full"> 
+<div id="timeline-row" class="flex items-center space-x-2 md:space-x-4 w-full"> 
                     
                     
 <div id="seek-bar" class="relative flex-grow h-1.5 bg-white/30 rounded-full cursor-pointer group">
@@ -110,7 +123,8 @@
 
                     
 <div class="flex items-center space-x-1 flex-shrink-0">
-                        <span id="remaining-time" class="text-white text-sm font-medium select-none w-12 text-center">-0:00</span>
+                        
+<span id="remaining-time" class="text-white text-xs md:text-sm font-medium select-none w-10 md:w-12 text-center">-0:00</span>
                     </div>
                 </div>
 
@@ -119,42 +133,42 @@
 <div id="bottom-controls-row" class="flex items-center justify-between">
                     
                     
-<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-1 md:space-x-2">
                         
 <button id="skip-backward-button" 
-                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                                class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Back10Medium">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="Back10Medium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/>
                             </svg>
                         </button>
 
                         
 <button id="custom-play-button" 
-                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                                class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
                             
-<svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24">
+<svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
                             </svg>
 
                             
-<svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+<svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
                                 <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
                             </svg>
                         </button>
                         
                         
 <button id="skip-forward-button" 
-                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                                class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Forward10Medium">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="Forward10Medium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
                             </svg>
                         </button>
 
                         
-<div id="volume-control-wrapper" class="relative flex items-center h-12">
+<div id="volume-control-wrapper" class="relative flex items-center h-10 md:h-12">
                             
 <div id="volume-slider-container" class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
                                 
@@ -168,15 +182,15 @@
 
                             
 <button id="mute-button" 
-                                    class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
+                                    class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
                                 
                                 
-<svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
+<svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
                                     <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
                                 </svg>
                                 
                                 
-<svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
+<svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
                                     <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
                             </svg>
                             </button>
@@ -184,23 +198,23 @@
                     </div>
                     
                     
-<div class="flex items-center space-x-2 relative">
+<div class="flex items-center space-x-1 md:space-x-2 relative">
 
                         
 <div class="relative" id="audio-subtitle-wrapper">
                             
 <button id="audio-subtitle-toggle" 
-                                    class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none"
+                                    class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                                     title="Audio & Subtitles">
                                 
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" aria-hidden="true" data-icon="SubtitlesMedium" viewBox="0 0 24 24">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-6 h-6 md:w-full md:h-full" data-icon="SubtitlesMedium" viewBox="0 0 24 24">
                                     <path fill="currentColor" fill-rule="evenodd" d="M1 3a1 1 0 0 1 1-1h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3a1 1 0 0 1-1.55.83L11.7 18H2a1 1 0 0 1-1-1zm2 1v12h9.3l.25.17L17 19.13V16h4V4zm7 5H5V7h5zm9 2h-5v2h5zm-7 2H5v-2h7zm7-6h-7v2h7z" clip-rule="evenodd"/>
                                 </svg>
                             </button>
                             
                             
 <div id="audio-subtitle-menu" 
-                                 class="absolute bottom-14 right-0 w-[450px] bg-black/80 rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200">
+                                 class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] bg-black/80 rounded-xl shadow-2xl p-4 hidden text-white transition-opacity duration-200">
                                 
                                 <div class="flex gap-4">
                                     
@@ -226,15 +240,15 @@
 
                         
 <button id="fullscreen-button" 
-                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                                class="text-white flex items-center justify-center h-10 w-10 md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                             
                             
-<svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
+<svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
                                 <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
                             </svg>
 
                             
-<svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+<svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
                                 <path fill="currentColor" fill-rule="evenodd" d="M24 8h-5V3h-2v7h7zM0 16h5v5h2v-7H0zm7-6H0V8h5V3h2zm12 11v-5h5v-2h-7v7z" clip-rule="evenodd"/>
                             </svg>
                         </button>
@@ -256,7 +270,7 @@
         const videoContainer = document.getElementById('video-container'); 
         const errorMessageDiv = document.getElementById('error-message');
         
-        // UI Elements (omitted for brevity, assume all are defined as before)
+        // UI Elements
         const topOverlay = document.getElementById('top-overlay');
         const bottomOverlay = document.getElementById('bottom-overlay');
         const customPlayButton = document.getElementById('custom-play-button'); 
@@ -296,7 +310,7 @@
         const hlsUrl = urlParams.get('url') || 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
         
         let hlsInstance = null; // Store the Hls instance
-        let isHlsJsMode = false; // New flag to determine if hls.js is being used
+        let isHlsJsMode = false; // Flag to determine if hls.js is being used
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 3000;
         let isSeeking = false; 
@@ -313,7 +327,7 @@
             errorMessageDiv.classList.remove('hidden');
         }
 
-        // --- Loader and Progress Functions (Omitted for brevity, unchanged) ---
+        /** Simple functions to control the loading spinner. */
         function showLoader() { loadingIndicator.classList.remove('hidden'); }
         function hideLoader() { loadingIndicator.classList.add('hidden'); }
 
@@ -353,26 +367,31 @@
             if (!video.duration || isSeeking) return;
             const percent = (video.currentTime / video.duration) * 100;
             progressIndicator.style.width = `${percent}%`;
-            const thumbPosition = `calc(${percent}% - 6px)`;
+            
+            // Adjust for seek thumb width (3px = half of 6px thumb)
+            const thumbPosition = `calc(${percent}% - 3px)`; 
             seekThumb.style.left = thumbPosition;
+            
             const remainingSeconds = video.duration - video.currentTime;
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
         
-        // --- Controls Visibility (Omitted for brevity, unchanged) ---
-
+        /** Shows video controls (bottom bar) */
         function showControls() {
             bottomOverlay.classList.remove('controls-hidden');
             bottomOverlay.classList.add('controls-visible');
         }
 
+        /** Hides video controls (bottom bar) */
         function hideControls() {
+            // Do not hide controls if the audio/subtitle menu is open
             if(audioSubtitleMenu.classList.contains('hidden')) {
                 bottomOverlay.classList.remove('controls-visible');
                 bottomOverlay.classList.add('controls-hidden');
             }
         }
         
+        /** Toggles the play/pause icon in the bottom controls bar. */
         function toggleBottomPlayPauseIcon(isPaused) {
             if (isPaused) {
                 playIcon.classList.remove('hidden');
@@ -383,6 +402,7 @@
             }
         }
 
+        /** Toggles the large center play/pause icon and visibility of its container. */
         function toggleCenterPlayPauseIcon(isPaused) {
             if (isPaused) {
                 centerPlayIcon.classList.remove('hidden');
@@ -395,17 +415,18 @@
             }
         }
 
+        /** Resets the timer that automatically hides the controls after inactivity. */
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
             showControls();
             
+            // Hide controls only if playing, not seeking, and the menu is closed
             if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden')) {
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
         
-        // --- Volume, Seeking, Fullscreen (Omitted for brevity, mostly unchanged) ---
-
+        /** Updates the volume icon (mute/unmuted) */
         function updateMuteIcon() {
             if (video.muted || video.volume === 0) {
                 volumeOnIcon.classList.add('hidden');
@@ -416,61 +437,22 @@
             }
         }
 
+        /** Updates the visual position of the volume slider and thumb. */
         function updateVolumeSlider() {
             const volume = video.muted ? 0 : video.volume; 
             const percent = volume * 100;
             
             volumeLevel.style.height = `${percent}%`;
+            // 8px = half of the 16px thumb height
             volumeThumbControl.style.bottom = `calc(${percent}% - 8px)`;
             
             updateMuteIcon();
         }
 
-        function calculateNewVolume(clientY) {
-            const rect = volumeSliderTrack.getBoundingClientRect();
-            let distance = rect.bottom - clientY;
-            if (distance < 0) distance = 0;
-            if (distance > rect.height) distance = rect.height;
-            const volumeRatio = distance / rect.height;
-            return Math.max(0, Math.min(1, volumeRatio)); 
-        }
-
-        function handleVolumeAdjust(event) {
-            event.preventDefault(); 
-            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
-            const newVolume = calculateNewVolume(clientY);
-            video.volume = newVolume;
-            if (newVolume > 0) {
-                video.muted = false;
-                lastKnownVolume = newVolume;
-            } else {
-                video.muted = true;
-            }
-            updateVolumeSlider(); 
-        }
-
-        function startVolumeAdjusting(event) {
-            isVolumeAdjusting = true;
-            event.preventDefault(); 
-            window.addEventListener('mousemove', handleVolumeAdjust);
-            window.addEventListener('mouseup', endVolumeAdjusting);
-            window.addEventListener('touchmove', handleVolumeAdjust);
-            window.addEventListener('touchend', endVolumeAdjusting);
-            handleVolumeAdjust(event);
-        }
-
-        function endVolumeAdjusting() {
-            if (!isVolumeAdjusting) return;
-            isVolumeAdjusting = false;
-            window.removeEventListener('mousemove', handleVolumeAdjust);
-            window.removeEventListener('mouseup', endVolumeAdjusting);
-            window.removeEventListener('touchmove', handleVolumeAdjust);
-            window.removeEventListener('touchend', endVolumeAdjusting);
-            resetInactivityTimer();
-        }
-        
+        /** Mutes or unmutes the video. */
         function toggleMute() {
             if (video.muted) {
+                // Restore previous volume or default to 0.5
                 video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
                 video.muted = false;
             } else {
@@ -480,7 +462,21 @@
             updateVolumeSlider();
             resetInactivityTimer();
         }
-
+        
+        /** Handles the logic for playing or pausing the video. */
+        function toggleVideoPlayPause() {
+            if (audioSubtitleMenu.classList.contains('hidden')) { 
+                if (video.paused || video.ended) {
+                    video.play().catch(e => {
+                        displayError("Play failed. User interaction may be required. Error: " + e.message);
+                    });
+                } else {
+                    video.pause();
+                }
+            }
+        }
+        
+        /** Calculates the time based on the seek bar click position. */
         function calculateNewTime(clientX) {
             const rect = seekBar.getBoundingClientRect();
             let clickPosition = clientX - rect.left;
@@ -490,36 +486,49 @@
             return video.duration * seekRatio;
         }
 
+        /** Visually updates the seek bar position during a drag/seek event. */
         function handleSeek(clientX) {
             if (!video.duration || video.duration === Infinity) return;
             const newTime = calculateNewTime(clientX);
             const percent = (newTime / video.duration) * 100;
             progressIndicator.style.width = `${percent}%`;
-            seekThumb.style.left = `calc(${percent}% - 6px)`;
+            
+            // Adjust for seek thumb width (3px = half of 6px thumb)
+            seekThumb.style.left = `calc(${percent}% - 3px)`; 
+            
             const remainingSeconds = video.duration - newTime;
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
 
+        /** Starts the seeking process (on mousedown/touchstart). */
         function startSeeking(event) {
             if (!video.duration || video.duration === Infinity) return;
             isSeeking = true;
             showControls(); 
             seekThumb.classList.add('scale-100');
+            
+            // Define move handlers dynamically
             currentMouseMoveHandler = (e) => handleSeek(e.clientX);
             currentTouchMoveHandler = (e) => handleSeek(e.touches[0].clientX);
+            
             window.addEventListener('mousemove', currentMouseMoveHandler);
             window.addEventListener('mouseup', endSeeking);
             window.addEventListener('touchmove', currentTouchMoveHandler, { passive: true });
             window.addEventListener('touchend', endSeeking);
+            
+            // Perform initial seek
             handleSeek(event.touches ? event.touches[0].clientX : event.clientX);
         }
 
+        /** Ends the seeking process and sets the video currentTime (on mouseup/touchend). */
         function endSeeking(event) {
             if (!isSeeking) return;
             const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
             video.currentTime = calculateNewTime(clientX);
             isSeeking = false;
             seekThumb.classList.remove('scale-100');
+            
+            // Cleanup listeners
             if (currentMouseMoveHandler) {
                 window.removeEventListener('mousemove', currentMouseMoveHandler);
                 currentMouseMoveHandler = null;
@@ -533,6 +542,7 @@
             resetInactivityTimer();
         }
 
+        /** Toggles native fullscreen mode. */
         function toggleFullscreen() {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
@@ -543,6 +553,7 @@
             }
         }
 
+        /** Updates the fullscreen button icon based on state. */
         function updateFullscreenIcon() {
             const isFullscreen = !!document.fullscreenElement;
             if (isFullscreen) {
@@ -554,42 +565,28 @@
             }
         }
 
+        /** Jumps backward 10 seconds. */
         function handleSkipBackward() {
             video.currentTime = Math.max(0, video.currentTime - 10);
             resetInactivityTimer(); 
         }
 
+        /** Jumps forward 10 seconds. */
         function handleSkipForward() {
             video.currentTime = Math.min(video.duration, video.currentTime + 10);
             resetInactivityTimer();
         }
-
-        function toggleVideoPlayPause() {
-            if (audioSubtitleMenu.classList.contains('hidden')) { 
-                if (video.paused || video.ended) {
-                    video.play().catch(e => {
-                        displayError("Play failed. User interaction may be required. Error: " + e.message);
-                    });
-                } else {
-                    video.pause();
-                }
-            }
-        }
-        
-        // --- Audio/Subtitle Track Management (Refactored for Native/HLS.js) ---
 
         /** Toggles the visibility of the Audio/Subtitle menu. */
         function toggleAudioSubtitleMenu() {
             const isCurrentlyHidden = audioSubtitleMenu.classList.contains('hidden');
 
             if (isCurrentlyHidden) {
-                // Open the menu
-                renderTracksMenu(); // Render/Re-render to show current selection
+                renderTracksMenu(); 
                 audioSubtitleMenu.classList.remove('hidden');
                 clearTimeout(inactivityTimer); 
                 showControls(); 
             } else {
-                // Close the menu
                 audioSubtitleMenu.classList.add('hidden');
                 resetInactivityTimer(); 
             }
@@ -634,10 +631,12 @@
             
             // --- 2. SUBTITLE TRACKS ---
             let subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions') : []);
+            
+            // HLS.js uses -1 for 'Off', Native API uses 'disabled' mode
             let currentSubIndex = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t => t.mode === 'showing');
 
             // Add 'Off' option first
-            const isOffSelected = isHlsJsMode ? currentSubIndex === -1 : currentSubIndex === -1;
+            const isOffSelected = (currentSubIndex === -1);
             const offLi = document.createElement('li');
             offLi.className = `track-selector cursor-pointer hover:text-red-400 p-1 rounded transition ${isOffSelected ? 'font-bold text-red-400 bg-red-900/20' : 'text-gray-200'}`;
             offLi.textContent = 'Off';
@@ -660,7 +659,7 @@
                 li.addEventListener('click', () => handleTrackSelection('subtitle', index));
                 subtitleList.appendChild(li);
                 
-                // Native Text Track Mode Change Listener (Crucial for live updates)
+                // Native Text Track Mode Change Listener (Crucial for live updates on iOS)
                 if (!isHlsJsMode) {
                     track.onchange = renderTracksMenu;
                 }
@@ -676,7 +675,6 @@
                     // Native API: Toggle the 'enabled' property
                     const nativeAudioTracks = video.audioTracks;
                     for (let i = 0; i < nativeAudioTracks.length; i++) {
-                        // The index here corresponds to the array index from renderTracksMenu
                         nativeAudioTracks[i].enabled = (i === index); 
                     }
                 }
@@ -715,7 +713,7 @@
                 container.addEventListener(event, resetInactivityTimer);
             });
 
-            // Control event listeners (play, mute, seek, fullscreen, etc.)
+            // Control event listeners
             topOverlay.addEventListener('click', toggleVideoPlayPause);
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
             centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
@@ -730,10 +728,11 @@
             document.addEventListener('click', handleDocumentClick); 
             seekBar.addEventListener('mousedown', startSeeking);
             seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
-            volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
-            volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
+
+            // Volume visibility handlers (Note: Volume adjusting handlers are defined in the previous version and omitted here for brevity, but the logic remains the same for volume-slider-track listeners)
             volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
             volumeControlWrapper.addEventListener('mouseleave', () => {
+                 // A slight delay in case the mouse briefly leaves the wrapper while adjusting
                  setTimeout(() => { if (!isVolumeAdjusting) { volumeSliderContainer.classList.add('hidden'); } }, 300);
             });
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
@@ -794,6 +793,54 @@
                 resetInactivityTimer();
             }
         }
+        
+        // --- Volume Slider Adjusting Logic (Retained from previous working version) ---
+        function calculateNewVolume(clientY) {
+            const rect = volumeSliderTrack.getBoundingClientRect();
+            let distance = rect.bottom - clientY;
+            if (distance < 0) distance = 0;
+            if (distance > rect.height) distance = rect.height;
+            const volumeRatio = distance / rect.height;
+            return Math.max(0, Math.min(1, volumeRatio)); 
+        }
+
+        function handleVolumeAdjust(event) {
+            event.preventDefault(); 
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+            const newVolume = calculateNewVolume(clientY);
+            video.volume = newVolume;
+            if (newVolume > 0) {
+                video.muted = false;
+                lastKnownVolume = newVolume;
+            } else {
+                video.muted = true;
+            }
+            updateVolumeSlider(); 
+        }
+
+        function startVolumeAdjusting(event) {
+            isVolumeAdjusting = true;
+            event.preventDefault(); 
+            window.addEventListener('mousemove', handleVolumeAdjust);
+            window.addEventListener('mouseup', endVolumeAdjusting);
+            window.addEventListener('touchmove', handleVolumeAdjust);
+            window.addEventListener('touchend', endVolumeAdjusting);
+            handleVolumeAdjust(event);
+        }
+
+        function endVolumeAdjusting() {
+            if (!isVolumeAdjusting) return;
+            isVolumeAdjusting = false;
+            window.removeEventListener('mousemove', handleVolumeAdjust);
+            window.removeEventListener('mouseup', endVolumeAdjusting);
+            window.removeEventListener('touchmove', handleVolumeAdjust);
+            window.removeEventListener('touchend', endVolumeAdjusting);
+            resetInactivityTimer();
+            volumeSliderContainer.classList.add('hidden');
+        }
+        volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
+        volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
+
 
         // --- HLS Initialization ---
         
@@ -813,7 +860,7 @@
                 });
 
                 hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                    renderTracksMenu(); // Render menu after parsing
+                    renderTracksMenu(); 
                 });
                 
                 // Listeners to re-render the menu if HLS state changes
@@ -821,7 +868,6 @@
                 hls.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
-                    // Error handling logic (omitted for brevity)
                     console.error('HLS Error Data:', data);
                     if (data.fatal) {
                         displayError("Fatal HLS error. Cannot play stream.");
@@ -845,9 +891,8 @@
                 showLoader(); 
                 video.src = url;
                 
-                // In Native HLS, metadata and tracks load after setting the src
                 video.addEventListener('loadedmetadata', () => {
-                    renderTracksMenu(); // Initialize the menu with native tracks
+                    renderTracksMenu(); 
                     hideLoader();
                     setupInactivityDetection();
                 }, { once: true });
