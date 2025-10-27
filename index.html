@@ -3,47 +3,114 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Plyr HLS Player with Audio Tracks</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
+  <title>Custom HLS Video Player</title>
   <style>
     body {background:#0f1724; color:white; font-family:Arial; display:flex; justify-content:center; align-items:center; height:100vh; margin:0}
-    .player {max-width:900px; width:95%; background:#1a2438; padding:12px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.4)}
-    video {width:100%; border-radius:8px; background:black;}
-    select {margin-top:10px; width:100%; padding:6px; border-radius:6px; border:1px solid #06b6d4; background:#0b1220; color:#06b6d4; cursor:pointer;}
+    .player {max-width:900px; width:95%; position:relative; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.4);}
+    video {width:100%; display:block; background:black;}
+    .controls {position:absolute; bottom:0; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:15px; padding:10px; background:rgba(0,0,0,0.6); opacity:1; transition:opacity .3s ease;}
+    .controls.hide {opacity:0; pointer-events:none;}
+    button {background:none; border:none; color:#06b6d4; font-size:20px; cursor:pointer; transition:color .2s;}
+    button:hover {color:#38bdf8;}
+    input[type=range] {width:100px; cursor:pointer;}
+    select {position:absolute; top:10px; right:10px; padding:4px 6px; border-radius:6px; border:1px solid #06b6d4; background:#0b1220; color:#06b6d4; cursor:pointer;}
   </style>
 </head>
 <body>
-  <div class="player">
-    <video id="player" playsinline controls crossorigin="anonymous"></video>
+  <div class="player" id="player">
+    <video id="video" playsinline crossorigin="anonymous"></video>
+    <div class="controls" id="controls">
+      <button id="back">⏪</button>
+      <button id="play">▶️</button>
+      <button id="forward">⏩</button>
+      <span id="time">0:00 / 0:00</span>
+      <input id="progress" type="range" value="0" min="0" step="0.1">
+      <button id="mute">🔊</button>
+      <input id="volume" type="range" min="0" max="1" step="0.05" value="1">
+      <button id="fullscreen">⛶</button>
+    </div>
     <select id="audioSelect"></select>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.min.js"></script>
   <script>
-    const video = document.getElementById('player');
+    const video = document.getElementById('video');
+    const controls = document.getElementById('controls');
+    const playBtn = document.getElementById('play');
+    const backBtn = document.getElementById('back');
+    const forwardBtn = document.getElementById('forward');
+    const muteBtn = document.getElementById('mute');
+    const volumeSlider = document.getElementById('volume');
+    const progress = document.getElementById('progress');
+    const timeDisplay = document.getElementById('time');
+    const fullscreenBtn = document.getElementById('fullscreen');
     const audioSelect = document.getElementById('audioSelect');
+    const playerContainer = document.getElementById('player');
+
     const src = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
-
-    const player = new Plyr(video, {
-      controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'fullscreen'],
-      settings: ['quality', 'speed'],
-    });
-
     let hls;
+
     if (Hls.isSupported()) {
       hls = new Hls();
       hls.loadSource(src);
       hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        updateAudioTracks();
-      });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => updateAudioTracks());
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => updateAudioTracks());
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
     }
 
+    // Play/pause toggle
+    playBtn.onclick = () => {
+      if (video.paused) {
+        video.play();
+        playBtn.textContent = '⏸️';
+      } else {
+        video.pause();
+        playBtn.textContent = '▶️';
+      }
+    };
+
+    // Skip backward and forward
+    backBtn.onclick = () => video.currentTime = Math.max(video.currentTime - 10, 0);
+    forwardBtn.onclick = () => video.currentTime = Math.min(video.currentTime + 10, video.duration);
+
+    // Mute toggle
+    muteBtn.onclick = () => {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? '🔇' : '🔊';
+    };
+
+    // Volume control
+    volumeSlider.oninput = e => video.volume = e.target.value;
+
+    // Update time and progress bar
+    video.ontimeupdate = () => {
+      progress.max = video.duration;
+      progress.value = video.currentTime;
+      timeDisplay.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+    };
+
+    progress.oninput = e => video.currentTime = e.target.value;
+
+    // Fullscreen toggle
+    fullscreenBtn.onclick = () => {
+      if (!document.fullscreenElement) {
+        playerContainer.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    // Format time helper
+    function formatTime(sec) {
+      if (!sec) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    // Audio tracks update
     function updateAudioTracks() {
       if (!hls || !hls.audioTracks) return;
       audioSelect.innerHTML = '';
@@ -57,10 +124,23 @@
     }
 
     audioSelect.addEventListener('change', () => {
-      if (hls) {
-        hls.audioTrack = parseInt(audioSelect.value);
-      }
+      if (hls) hls.audioTrack = parseInt(audioSelect.value);
     });
+
+    // Auto-hide controls after 3s of no movement
+    let hideTimeout;
+    const showControls = () => {
+      controls.classList.remove('hide');
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => controls.classList.add('hide'), 3000);
+    };
+
+    playerContainer.addEventListener('mousemove', showControls);
+    playerContainer.addEventListener('click', showControls);
+    document.addEventListener('keydown', showControls);
+
+    // Start with controls visible, then hide after delay
+    showControls();
   </script>
 </body>
 </html>
