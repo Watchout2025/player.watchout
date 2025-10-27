@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional HLS Player with Dynamic Tracks</title>
+    <title>Functional HLS Video Player (Mobile Skip Fix)</title>
     
 <script src="https://cdn.tailwindcss.com"></script>
     
@@ -82,7 +82,7 @@
 
         
 <div id="center-play-pause-overlay" 
-             class="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
+             class="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-500 opacity-100 pointer-events-auto">
             
             
 <div id="center-controls-mobile-only" class="flex items-center space-x-6 md:space-x-10">
@@ -327,7 +327,6 @@
         const centerPauseIcon = document.getElementById('center-pause-icon');
 
         
-        // NEW Mobile Skip Buttons
         const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-button');
         const mobileSkipForwardButton = document.getElementById('mobile-skip-forward-button');
 
@@ -403,23 +402,33 @@
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
         
-        /** Shows video controls (bottom bar) */
+        /** Shows video controls (bottom bar and center skip buttons) */
         function showControls() {
+            // 1. Bottom Overlay (Time/Seek Bar/Buttons)
             bottomOverlay.classList.remove('controls-hidden');
             bottomOverlay.classList.add('controls-visible');
+
+            // 2. Center Overlay (Skip Buttons / Center Play Button)
+            centerPlayPauseOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            centerPlayPauseOverlay.classList.add('opacity-100', 'pointer-events-auto');
         }
 
-        /** Hides video controls (bottom bar) */
+        /** Hides video controls (bottom bar and center skip buttons) */
         function hideControls() {
             // Do not hide controls if the audio/subtitle menu is open
             if(audioSubtitleMenu.classList.contains('hidden')) {
+                // 1. Bottom Overlay
                 bottomOverlay.classList.remove('controls-visible');
                 bottomOverlay.classList.add('controls-hidden');
+
+                // 2. Center Overlay
+                centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+                centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
             }
         }
         
         /** Toggles the play/pause icon in the bottom controls bar. */
-        function toggleBottomPlayPauseIcon(isPaused) {
+        function updateBottomPlayPauseIcon(isPaused) {
             if (isPaused) {
                 playIcon.classList.remove('hidden');
                 pauseIcon.classList.add('hidden');
@@ -429,16 +438,15 @@
             }
         }
 
-        /** Toggles the large center play/pause icon and visibility of its container. */
-        function toggleCenterPlayPauseIcon(isPaused) {
+        /** Updates the large center play/pause icon based on pause state. 
+         * The container visibility is now managed by showControls/hideControls. */
+        function updateCenterPlayPauseIcon(isPaused) {
             if (isPaused) {
                 centerPlayIcon.classList.remove('hidden');
                 centerPauseIcon.classList.add('hidden');
-                centerPlayPauseOverlay.classList.remove('hidden'); 
             } else {
                 centerPlayIcon.classList.add('hidden');
                 centerPauseIcon.classList.remove('hidden');
-                centerPlayPauseOverlay.classList.add('hidden'); 
             }
         }
 
@@ -748,7 +756,7 @@
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
             
-            // NEW: Mobile skip buttons
+            // Mobile skip buttons
             mobileSkipBackwardButton.addEventListener('click', handleSkipBackward);
             mobileSkipForwardButton.addEventListener('click', handleSkipForward);
 
@@ -782,22 +790,22 @@
             video.addEventListener('canplay', hideLoader);
 
             video.addEventListener('pause', () => {
-                showControls();
-                toggleBottomPlayPauseIcon(true);
-                toggleCenterPlayPauseIcon(true); 
+                showControls(); // Show all controls
+                updateBottomPlayPauseIcon(true);
+                updateCenterPlayPauseIcon(true); // Show center icon
                 clearTimeout(inactivityTimer); 
             });
 
             video.addEventListener('play', () => {
-                toggleBottomPlayPauseIcon(false);
-                toggleCenterPlayPauseIcon(false); 
+                updateBottomPlayPauseIcon(false);
+                updateCenterPlayPauseIcon(false); // Hide center icon, but container remains visible via resetInactivityTimer
                 resetInactivityTimer();
             });
             
             video.addEventListener('ended', () => {
                 showControls();
-                toggleBottomPlayPauseIcon(true);
-                toggleCenterPlayPauseIcon(true); 
+                updateBottomPlayPauseIcon(true);
+                updateCenterPlayPauseIcon(true); 
                 hideLoader(); 
             });
             
@@ -814,18 +822,19 @@
             updateVolumeSlider(); 
             updateFullscreenIcon(); 
             
+            // Apply initial state for controls
             if (video.paused || video.ended) { 
                 showControls();
-                toggleBottomPlayPauseIcon(true);
-                toggleCenterPlayPauseIcon(true); 
+                updateBottomPlayPauseIcon(true);
+                updateCenterPlayPauseIcon(true); 
             } else {
-                toggleBottomPlayPauseIcon(false);
-                toggleCenterPlayPauseIcon(false); 
+                updateBottomPlayPauseIcon(false);
+                updateCenterPlayPauseIcon(false); 
                 resetInactivityTimer();
             }
         }
         
-        // --- Volume Slider Adjusting Logic (Retained from previous working version) ---
+        // --- Volume Slider Adjusting Logic ---
         function calculateNewVolume(clientY) {
             const rect = volumeSliderTrack.getBoundingClientRect();
             let distance = rect.bottom - clientY;
