@@ -686,8 +686,9 @@
             // UPDATED SPEED OPTIONS for the horizontal slider
             const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5];
 
-            // Set initial video size
-            video.style.height = '450px';
+            /* * FIX: Removed initial fixed height setting for better mobile fluidity.
+             * video.style.height = '450px'; 
+             */
 
             /**
              * Updates the custom CSS property for the progress bar's track fill (Netflix Red).
@@ -1052,11 +1053,14 @@
                     subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Not available (Native HLS).</li>';
 
                     video.addEventListener('loadedmetadata', () => {
-                        video.play().catch(e => {
+                        video.play().then(() => {
+                            // FIX: Only update status to "playing" if play promise resolves
+                            updateStatus('Stream loaded and playing (Native HLS).', 'success');
+                        }).catch(e => {
                             console.warn("Autoplay was prevented by browser (Native HLS).", e);
-                            updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
+                            // FIX: Update status if play is blocked
+                            updateStatus('Stream loaded. Tap the center button to start playback.', 'info');
                         });
-                        updateStatus('Stream loaded and playing (Native HLS).', 'success');
                     }, { once: true });
                 } 
                 else if (Hls.isSupported()) {
@@ -1074,7 +1078,7 @@
                             updateStatus('Manifest parsed. Playback started automatically.', 'success');
                         }).catch(e => {
                             console.warn("Autoplay was prevented by browser (HLS.js).", e);
-                            updateStatus('Manifest parsed. Press Play to start.', 'info');
+                            updateStatus('Manifest parsed. Tap the center button to start playback.', 'info');
                         });
                     });
 
@@ -1106,7 +1110,8 @@
              */
             function calculateSeekTime(e) {
                 const rect = seekBarContainer.getBoundingClientRect();
-                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                // Check for touch first, then mouse
+                const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
 
                 // Calculate the position relative to the container (0.0 to 1.0)
                 let clickPosition = (clientX - rect.left) / rect.width;
@@ -1163,6 +1168,8 @@
 
             // Handle touch events for mobile seeking
             seekBarContainer.addEventListener('touchstart', (e) => {
+                // Prevent touch action from immediately scrolling the page
+                e.preventDefault(); 
                 if (isNaN(video.duration) || video.duration === Infinity) return;
                 isSeeking = true;
                 video.pause();
@@ -1172,15 +1179,16 @@
 
                 const newTime = calculateSeekTime(e);
                 video.currentTime = newTime;
-            }, {passive: true}); 
+            }, {passive: false}); // passive: false is needed here to allow preventDefault
 
             window.addEventListener('touchmove', (e) => {
                 if (isSeeking && video.duration) {
-                    // Touchmove on window is usually passive, so avoid preventDefault
+                    // Prevent scroll when dragging seek bar
+                    e.preventDefault(); 
                     const newTime = calculateSeekTime(e);
                     video.currentTime = newTime;
                 }
-            });
+            }, {passive: false});
 
             window.addEventListener('touchend', () => {
                 if (isSeeking) {
