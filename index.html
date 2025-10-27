@@ -250,7 +250,10 @@
         const centerPauseIcon = document.getElementById('center-pause-icon');
 
 
-        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
+        const urlParams = new URLSearchParams(window.location.search);
+        const hlsUrl = urlParams.get('url') || "https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8";
+        console.log(hlsurl);
+
         const apiKey = ""; 
 
         let hlsInstance = null; // Store the Hls instance
