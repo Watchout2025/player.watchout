@@ -578,7 +578,7 @@
 
                 <!-- 10s Forward Seek Button -->
                 <button id="seek-forward-btn" class="control-button" title="+10 Seconds">
-                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Forward10Medium" data-icon-id=":r9i:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6" clip-rule="evenodd"/></svg>
+                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Forward10Medium" data-icon-id=":r9i:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q-.67-.44-1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6" clip-rule="evenodd"/></svg>
                 </button>
 
                 <!-- Volume Control (LEFT side) -->
@@ -688,6 +688,25 @@
 
             // Set initial video size
             video.style.height = '450px';
+
+            /**
+             * Utility to update the URL in the address bar.
+             * Uses history.replaceState to change the URL without a full page reload.
+             */
+            function updateUrlInAddressBar(url) {
+                const newUrl = `${window.location.origin}${window.location.pathname}?url=${encodeURIComponent(url)}`;
+                // Use replaceState to change the URL parameter without adding an entry to history
+                window.history.replaceState({ path: newUrl }, '', newUrl);
+            }
+            
+            /**
+             * Utility to get a URL parameter.
+             */
+            function getUrlParameter(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
 
             /**
              * Updates the custom CSS property for the progress bar's track fill (Netflix Red).
@@ -1018,7 +1037,7 @@
                     
                     renderTrackList(subtitleTrackList, subtitleTracksWithOff, activeListIndex, 'subtitle');
                 } else {
-                    // Only show 'Subtitles Off' option if no tracks exist
+                    // Only show 'Subtitles Off' option if no tracks were found
                     const offTrackOnly = [{name: 'Subtitles Off', lang: 'off', id: -1, forced: false}];
                     // Ensure hls.subtitleTrack is -1 in case no tracks were found
                     hls.subtitleTrack = -1; 
@@ -1035,14 +1054,18 @@
                     hls = null;
                 }
                 
+                // 1. Reset UI
                 seekBar.value = 0;
                 timeDisplay.textContent = '00:00';
                 updateSeekBarProgress(0); // Reset seek progress color
                 showControls(); // Ensure controls are visible on load
                 
-                // CRITICAL: Immediately clear menus and show loading state
+                // Clear menus and show loading state
                 audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading audio tracks...</li>';
                 subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading subtitles...</li>';
+
+                // 2. Update address bar immediately
+                updateUrlInAddressBar(hlsUrl);
 
                 if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = hlsUrl;
@@ -1368,9 +1391,16 @@
                 }
             });
 
-            // Initial stream load
-            if (urlInput.value) {
-                updateStatus('Loading stream...', 'info');
+            // 1. Check for URL parameter for auto-loading
+            const initialUrl = getUrlParameter('url');
+
+            if (initialUrl) {
+                urlInput.value = initialUrl;
+                updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
+                loadHlsStream(initialUrl); // Auto-load the URL from the parameter
+            } else if (urlInput.value) {
+                // 2. Load the default value if no parameter is present
+                updateStatus('Loading default stream...', 'info');
                 loadHlsStream(urlInput.value);
             }
 
