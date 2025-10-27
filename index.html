@@ -15,7 +15,7 @@
             --text-color: #f0f0f0;
             --border-radius: 8px;
             --webkit-progress-percent: 0%; /* Dynamic variable for seek bar fill */
-            --webkit-volume-percent: 100%; /* Dynamic variable for volume bar fill */
+            --webkit-volume-percent: 50%; /* Dynamic variable for volume bar fill */
         }
 
         * {
@@ -30,14 +30,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 10vh;
             color: var(--text-color);
+            padding: 20px;
         }
 
         /* --- Player Container --- */
         .player-container {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            max-width: 900px;
             background-color: var(--player-bg);
             border-radius: var(--border-radius);
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
@@ -48,13 +49,12 @@
         /* --- Video Wrapper (for positioning controls) --- */
         .video-wrapper {
             position: relative;
-            height: 100vh;
             background-color: #000;
         }
 
         #hls-video {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: auto;
             display: block;
             background-color: #000;
         }
@@ -154,6 +154,7 @@
             width: 48px;
             height: 48px;
             /* Adjust play icon to look centered in the circle */
+            transform: translateX(4px); 
         }
 
         /* Class to hide the central button when video is playing */
@@ -572,12 +573,12 @@
 
                 <!-- 10s Backward Seek Button -->
                 <button id="seek-back-btn" class="control-button" title="-10 Seconds">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" aria-hidden="true" data-icon="Back10Medium" data-icon-id=":r9h:"><path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/></svg>
+                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Back10Medium" data-icon-id=":r9h:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/></svg>
                 </button>
 
                 <!-- 10s Forward Seek Button -->
                 <button id="seek-forward-btn" class="control-button" title="+10 Seconds">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" aria-hidden="true" data-icon="Forward10Medium" data-icon-id=":r9i:"><path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6M8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/></svg>
+                    <svg class="icon" width="24" height="24" fill="none" aria-hidden="true" data-icon="Forward10Medium" data-icon-id=":r9i:" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6" clip-rule="evenodd"/></svg>
                 </button>
 
                 <!-- Volume Control (LEFT side) -->
@@ -592,7 +593,7 @@
                             <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7L9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
                         </svg>
                     </button>
-                    <input type="range" id="volume-bar" min="0" max="1" value="1" step="0.01">
+                    <input type="range" id="volume-bar" min="0" max="1" value="0.5" step="0.01">
                 </div>
 
                 <!-- Playback Speed Button (Toggles Menu) - Pushed to the right using margin-left: auto -->
@@ -625,7 +626,13 @@
         </div>
 
         <!-- Configuration -->
-        
+        <div class="config-area">
+            <div class="url-input-group">
+                <input type="text" id="m3u8-url" placeholder="Paste your .m3u8 link here" value="https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8">
+                <button id="load-button">Load Stream</button>
+            </div>
+            <p class="status-message" id="status-message">Ready to load stream.</p>
+        </div>
     </div>
 
     <script>
@@ -679,25 +686,8 @@
             // UPDATED SPEED OPTIONS for the horizontal slider
             const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5];
 
-
-            /**
-             * Utility to update the URL in the address bar.
-             * Uses history.replaceState to change the URL without a full page reload.
-             */
-            function updateUrlInAddressBar(url) {
-                const newUrl = `${window.location.origin}${window.location.pathname}?url=${encodeURIComponent(url)}`;
-                // Use replaceState to change the URL parameter without adding an entry to history
-                window.history.replaceState({ path: newUrl }, '', newUrl);
-            }
-            
-            /**
-             * Utility to get a URL parameter.
-             */
-            function getUrlParameter(name) {
-                const urlParams = new URLSearchParams(window.location.search);
-                return urlParams.get(name);
-            }
-
+            // Set initial video size
+            video.style.height = '450px';
 
             /**
              * Updates the custom CSS property for the progress bar's track fill (Netflix Red).
@@ -965,7 +955,7 @@
                         if (type === 'audio') {
                             if (hls && listIndex !== hls.audioTrack) {
                                 hls.audioTrack = listIndex;
-                                //updateStatus(`Audio track switched to: ${trackName}`, 'success');
+                                updateStatus(`Audio track switched to: ${trackName}`, 'success');
                             }
                         } else if (type === 'subtitle') {
                             // Subtitle tracks map:
@@ -976,7 +966,7 @@
 
                             if (hls && hlsTrackIndex !== hls.subtitleTrack) {
                                 hls.subtitleTrack = hlsTrackIndex;
-                                //updateStatus(`Subtitle track switched to: ${trackName}`, 'success');
+                                updateStatus(`Subtitle track switched to: ${trackName}`, 'success');
                                 
                                 // HLS.js handles the video's textTracks, but for robustness
                                 // we can hide all and show the one corresponding to the selected HLS track.
@@ -1028,7 +1018,7 @@
                     
                     renderTrackList(subtitleTrackList, subtitleTracksWithOff, activeListIndex, 'subtitle');
                 } else {
-                    // Only show 'Subtitles Off' option if no tracks were found
+                    // Only show 'Subtitles Off' option if no tracks exist
                     const offTrackOnly = [{name: 'Subtitles Off', lang: 'off', id: -1, forced: false}];
                     // Ensure hls.subtitleTrack is -1 in case no tracks were found
                     hls.subtitleTrack = -1; 
@@ -1045,18 +1035,14 @@
                     hls = null;
                 }
                 
-                // 1. Reset UI
                 seekBar.value = 0;
                 timeDisplay.textContent = '00:00';
                 updateSeekBarProgress(0); // Reset seek progress color
                 showControls(); // Ensure controls are visible on load
                 
-                // Clear menus and show loading state
+                // CRITICAL: Immediately clear menus and show loading state
                 audioTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading audio tracks...</li>';
                 subtitleTrackList.innerHTML = '<li class="menu-item" style="cursor: default;">Loading subtitles...</li>';
-
-                // 2. Update address bar immediately
-                updateUrlInAddressBar(hlsUrl);
 
                 if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = hlsUrl;
@@ -1068,16 +1054,16 @@
                     video.addEventListener('loadedmetadata', () => {
                         video.play().catch(e => {
                             console.warn("Autoplay was prevented by browser (Native HLS).", e);
-                            //updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
+                            updateStatus('Stream loaded, but playback requires interaction. Press Play to start.', 'success');
                         });
-                        //updateStatus('Stream loaded and playing (Native HLS).', 'success');
+                        updateStatus('Stream loaded and playing (Native HLS).', 'success');
                     }, { once: true });
                 } 
                 else if (Hls.isSupported()) {
                     hls = new Hls();
                     
                     hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                        //updateStatus('Media attached. Loading source...', 'info');
+                        updateStatus('Media attached. Loading source...', 'info');
                         hls.loadSource(hlsUrl);
                     });
 
@@ -1085,10 +1071,10 @@
                         // Tracks are available, run selection logic and populate the lists
                         loadHlsTracks(); 
                         video.play().then(() => {
-                            //updateStatus('Manifest parsed. Playback started automatically.', 'success');
+                            updateStatus('Manifest parsed. Playback started automatically.', 'success');
                         }).catch(e => {
                             console.warn("Autoplay was prevented by browser (HLS.js).", e);
-                            //updateStatus('Manifest parsed. Press Play to start.', 'info');
+                            updateStatus('Manifest parsed. Press Play to start.', 'info');
                         });
                     });
 
@@ -1097,17 +1083,17 @@
                         const errorMsg = `HLS.js Error: ${data.details}. Fatal: ${data.fatal}. Check console for details.`;
 
                         if (data.fatal) {
-                            //updateStatus(errorMsg, 'error');
+                            updateStatus(errorMsg, 'error');
                             hls.destroy();
                             hls = null;
-                            //updateStatus('Playback failed. Check the M3U8 link or network connection.', 'error');
+                            updateStatus('Playback failed. Check the M3U8 link or network connection.', 'error');
                         }
                     });
 
                     hls.attachMedia(video);
                 } 
                 else {
-                    //updateStatus('HLS is not supported in this browser. Please use a modern browser.', 'error');
+                    updateStatus('HLS is not supported in this browser. Please use a modern browser.', 'error');
                 }
             }
 
@@ -1372,18 +1358,20 @@
 
             // --- Initialization ---
 
+            loadButton.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                if (url) {
+                    updateStatus('Loading stream...', 'info');
+                    loadHlsStream(url);
+                } else {
+                    updateStatus('Please enter a valid M3U8 URL.', 'error');
+                }
+            });
 
-            // 1. Check for URL parameter for auto-loading
-            const initialUrl = getUrlParameter('url');
-
-            if (initialUrl) {
-                //urlInput.value = initialUrl;
-                //updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
-                loadHlsStream(initialUrl); // Auto-load the URL from the parameter
-            } else {
-                // 2. Load the default value if no parameter is present
-                //updateStatus('Loading default stream...', 'info');
-                //loadHlsStream(urlInput.value);
+            // Initial stream load
+            if (urlInput.value) {
+                updateStatus('Loading stream...', 'info');
+                loadHlsStream(urlInput.value);
             }
 
             // Populate the speed menu on load
