@@ -1,146 +1,497 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Custom HLS Video Player</title>
-  <style>
-    body {background:#0f1724; color:white; font-family:Arial; display:flex; justify-content:center; align-items:center; height:100vh; margin:0}
-    .player {max-width:900px; width:95%; position:relative; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.4);}
-    video {width:100%; display:block; background:black;}
-    .controls {position:absolute; bottom:0; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:15px; padding:10px; background:rgba(0,0,0,0.6); opacity:1; transition:opacity .3s ease;}
-    .controls.hide {opacity:0; pointer-events:none;}
-    button {background:none; border:none; color:#06b6d4; font-size:20px; cursor:pointer; transition:color .2s;}
-    button:hover {color:#38bdf8;}
-    input[type=range] {width:100px; cursor:pointer;}
-    select {position:absolute; top:10px; right:10px; padding:4px 6px; border-radius:6px; border:1px solid #06b6d4; background:#0b1220; color:#06b6d4; cursor:pointer;}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full-Screen HLS Stream Player with Custom Controls</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load hls.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
+    <style>
+        /* Define Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        /* Set HTML and Body to full viewport size and remove default margins/padding */
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+        }
+
+        /* Ensure the video container fills the viewport */
+        #video-container {
+            width: 100vw;
+            height: 100vh;
+            background-color: black;
+        }
+
+        /* Overlay class for showing the interactive state */
+        .overlay-active {
+            opacity: 1;
+            pointer-events: auto; /* Allows clicks on the overlay and button */
+        }
+
+        /* Overlay class for hiding the interactive state */
+        .overlay-inactive {
+            opacity: 0;
+            pointer-events: none; /* Prevents clicks from reaching the video/overlay, allowing video to play uninterrupted */
+        }
+        
+        /* Custom styling for the seek thumb appearance on hover */
+        #seek-bar:hover #seek-thumb {
+            transform: translateY(-50%) scale(1);
+        }
+    </style>
 </head>
 <body>
-  <div class="player" id="player">
-    <video id="video" playsinline crossorigin="anonymous"></video>
-    <div class="controls" id="controls">
-      <button id="back">⏪</button>
-      <button id="play">▶️</button>
-      <button id="forward">⏩</button>
-      <span id="time">0:00 / 0:00</span>
-      <input id="progress" type="range" value="0" min="0" step="0.1">
-      <button id="mute">🔊</button>
-      <input id="volume" type="range" min="0" max="1" step="0.05" value="1">
-      <button id="fullscreen">⛶</button>
+
+    <!-- Video Container now fills 100vw and 100vh -->
+    <div id="video-container" class="relative">
+        <!-- The Video Element. Note: 'controls' attribute is removed to use custom controls -->
+        <video id="video" muted autoplay class="w-full h-full object-contain"></video>
+
+        <!-- Full-Screen Overlay, used for custom controls and click blocking -->
+        <div id="video-overlay" class="absolute inset-0 bg-black/30 flex flex-col justify-end transition-all duration-500 overlay-active">
+
+            <!-- Controls Bar Container -->
+            <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent p-6 flex flex-col space-y-3">
+                
+                <!-- 1. TOP ROW: Timeline Row (Seek Bar + Remaining Time Display) -->
+                <div id="timeline-row" class="flex items-center space-x-4 w-full"> 
+                    
+                    <!-- Seek Bar (Interactive) - Takes up the flexible space -->
+                    <div id="seek-bar" class="relative flex-grow h-1.5 bg-white/30 rounded-full cursor-pointer group">
+                        <!-- Progress Indicator (Red) -->
+                        <div id="progress-indicator" class="absolute inset-y-0 left-0 bg-red-600 rounded-full transition-all duration-100" style="width: 0%;"></div>
+                        
+                        <!-- Seek Thumb (Red) -->
+                        <div id="seek-thumb" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100" style="left: 0%;"></div>
+                    </div>
+
+                    <!-- Remaining Time Display (Right of Seek Bar) - Fixed width to prevent layout shift -->
+                    <!-- w-12 is used to accommodate the minus sign and prevent jitter -->
+                    <div class="flex items-center space-x-1 flex-shrink-0">
+                        <span id="remaining-time" class="text-white text-sm font-medium select-none w-12 text-center">-0:00</span>
+                    </div>
+                </div>
+
+
+                <!-- 2. BOTTOM ROW: Back 10s, Play/Pause, Forward 10s (Left) and Fullscreen Button (Right) -->
+                <div id="bottom-controls-row" class="flex items-center justify-between">
+                    
+                    <!-- LEFT GROUP: Back 10s, Play/Pause, and Forward 10s Buttons -->
+                    <div class="flex items-center space-x-2">
+                        <!-- Back 10s Button -->
+                        <button id="skip-backward-button" 
+                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                            <!-- Back 10s Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Back10Medium">
+                                <path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+
+                        <!-- Play/Pause Button -->
+                        <button id="custom-play-button" 
+                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                            
+                            <!-- Play Icon (Visible when paused) -->
+                            <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+                            </svg>
+
+                            <!-- Pause Icon (Visible when playing) - UPDATED ICON -->
+                            <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+                                <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        
+                        <!-- Forward 10s Button -->
+                        <button id="skip-forward-button" 
+                                class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                            <!-- Forward 10s Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="Forward10Medium">
+                                <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6M8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- RIGHT SIDE: Fullscreen Button -->
+                    <button id="fullscreen-button" 
+                            class="text-white flex items-center justify-center h-12 w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                        
+                        <!-- Fullscreen Enter Icon (Default) -->
+                        <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
+                            <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
+                        </svg>
+
+                        <!-- Fullscreen Exit Icon (Hidden by default) -->
+                        <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd" d="M17 19h-4v2h6a2 2 0 0 0 2-2v-6h-2zM7 5h4V3H5a2 2 0 0 0-2 2v6h2zm10-2h4v6h2V5a2 2 0 0 0-2-2h-4zM7 19v-4H5v4a2 2 0 0 0 2 2h6v-2z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
-    <select id="audioSelect"></select>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    const video = document.getElementById('video');
-    const controls = document.getElementById('controls');
-    const playBtn = document.getElementById('play');
-    const backBtn = document.getElementById('back');
-    const forwardBtn = document.getElementById('forward');
-    const muteBtn = document.getElementById('mute');
-    const volumeSlider = document.getElementById('volume');
-    const progress = document.getElementById('progress');
-    const timeDisplay = document.getElementById('time');
-    const fullscreenBtn = document.getElementById('fullscreen');
-    const audioSelect = document.getElementById('audioSelect');
-    const playerContainer = document.getElementById('player');
+    <!-- Error message positioned absolutely in the top-left corner, only visible on error -->
+    <div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-10">
+        <!-- Error messages will be displayed here -->
+    </div>
 
-    const src = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
-    let hls;
+    <script>
+        const video = document.getElementById('video');
+        const videoContainer = document.getElementById('video-container'); // Container for fullscreen
+        const errorMessageDiv = document.getElementById('error-message');
+        const videoOverlay = document.getElementById('video-overlay');
+        const customPlayButton = document.getElementById('custom-play-button');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        
+        // Elements for progress bar and time display
+        const seekBar = document.getElementById('seek-bar');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const seekThumb = document.getElementById('seek-thumb');
+        const remainingTimeDisplay = document.getElementById('remaining-time');
+        
+        // Elements for fullscreen control
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const fullscreenEnterIcon = document.getElementById('fullscreen-enter-icon');
+        const fullscreenExitIcon = document.getElementById('fullscreen-exit-icon');
+        
+        // Skip controls
+        const skipBackwardButton = document.getElementById('skip-backward-button');
+        const skipForwardButton = document.getElementById('skip-forward-button');
 
-    if (Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => updateAudioTracks());
-      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => updateAudioTracks());
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    }
+        const hlsUrl = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
+        const apiKey = ""; 
 
-    // Play/pause toggle
-    playBtn.onclick = () => {
-      if (video.paused) {
-        video.play();
-        playBtn.textContent = '⏸️';
-      } else {
-        video.pause();
-        playBtn.textContent = '▶️';
-      }
-    };
+        let inactivityTimer;
+        const INACTIVITY_TIMEOUT = 3000; // 3 seconds
+        let isSeeking = false; // Flag to track if the user is dragging the thumb
 
-    // Skip backward and forward
-    backBtn.onclick = () => video.currentTime = Math.max(video.currentTime - 10, 0);
-    forwardBtn.onclick = () => video.currentTime = Math.min(video.currentTime + 10, video.duration);
+        /**
+         * Utility function to display an error message to the user.
+         * @param {string} message The error message to display.
+         */
+        function displayError(message) {
+            console.error(message);
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+        }
 
-    // Mute toggle
-    muteBtn.onclick = () => {
-      video.muted = !video.muted;
-      muteBtn.textContent = video.muted ? '🔇' : '🔊';
-    };
+        // --- Time Formatting ---
 
-    // Volume control
-    volumeSlider.oninput = e => video.volume = e.target.value;
+        /** Converts seconds to M:SS or H:MM:SS format */
+        function formatTime(totalSeconds) {
+            if (isNaN(totalSeconds) || totalSeconds < 0) return '0:00';
+            const seconds = Math.floor(totalSeconds % 60);
+            const minutes = Math.floor(totalSeconds / 60) % 60;
+            const hours = Math.floor(totalSeconds / 3600);
+            
+            const paddedSeconds = seconds.toString().padStart(2, '0');
+            const paddedMinutes = minutes.toString().padStart(2, '0');
 
-    // Update time and progress bar
-    video.ontimeupdate = () => {
-      progress.max = video.duration;
-      progress.value = video.currentTime;
-      timeDisplay.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
-    };
+            if (hours > 0) {
+                return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+            } else {
+                return `${minutes}:${paddedSeconds}`;
+            }
+        }
 
-    progress.oninput = e => video.currentTime = e.target.value;
+        /** Updates the progress bar position and time displays */
+        function updateProgress() {
+            if (!video.duration || isSeeking) return; // Prevent updates while user is seeking
 
-    // Fullscreen toggle
-    fullscreenBtn.onclick = () => {
-      if (!document.fullscreenElement) {
-        playerContainer.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
-    };
+            const percent = (video.currentTime / video.duration) * 100;
+            
+            // Update progress indicator width
+            progressIndicator.style.width = `${percent}%`;
+            
+            // Update thumb position (subtract half the thumb width to center it)
+            const thumbPosition = `calc(${percent}% - 6px)`;
+            seekThumb.style.left = thumbPosition;
 
-    // Format time helper
-    function formatTime(sec) {
-      if (!sec) return '0:00';
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60).toString().padStart(2, '0');
-      return `${m}:${s}`;
-    }
+            // Update remaining time display
+            const remainingSeconds = video.duration - video.currentTime;
+            remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
+        }
 
-    // Audio tracks update
-    function updateAudioTracks() {
-      if (!hls || !hls.audioTracks) return;
-      audioSelect.innerHTML = '';
-      hls.audioTracks.forEach((track, i) => {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = track.name || track.lang || `Track ${i + 1}`;
-        audioSelect.appendChild(opt);
-      });
-      audioSelect.value = hls.audioTrack;
-    }
+        // --- Overlay & Button Visibility Control ---
 
-    audioSelect.addEventListener('change', () => {
-      if (hls) hls.audioTrack = parseInt(audioSelect.value);
-    });
+        function showOverlay() {
+            videoOverlay.classList.remove('overlay-inactive');
+            videoOverlay.classList.add('overlay-active');
+        }
 
-    // Auto-hide controls after 3s of no movement
-    let hideTimeout;
-    const showControls = () => {
-      controls.classList.remove('hide');
-      clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => controls.classList.add('hide'), 3000);
-    };
+        function hideOverlay() {
+            videoOverlay.classList.remove('overlay-active');
+            videoOverlay.classList.add('overlay-inactive');
+        }
+        
+        function togglePlayPauseIcon(isPaused) {
+            if (isPaused) {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            } else {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            }
+        }
 
-    playerContainer.addEventListener('mousemove', showControls);
-    playerContainer.addEventListener('click', showControls);
-    document.addEventListener('keydown', showControls);
+        /** Resets the inactivity timer to hide the overlay after 3 seconds */
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            showOverlay(); // Always show the overlay on any mouse/touch activity
+            
+            if (!video.paused && !isSeeking) {
+                // If the video is playing and not actively seeking, start the timer
+                inactivityTimer = setTimeout(hideOverlay, INACTIVITY_TIMEOUT);
+            }
+        }
 
-    // Start with controls visible, then hide after delay
-    showControls();
-  </script>
+        // --- Seeking Logic ---
+        
+        /** Calculates new time based on click/drag position */
+        function calculateNewTime(clientX) {
+            const rect = seekBar.getBoundingClientRect();
+            let clickPosition = clientX - rect.left;
+            
+            // Clamp position within the seek bar bounds
+            if (clickPosition < 0) clickPosition = 0;
+            if (clickPosition > rect.width) clickPosition = rect.width;
+
+            const seekRatio = clickPosition / rect.width;
+            const newTime = video.duration * seekRatio;
+            
+            return newTime;
+        }
+
+        function handleSeek(event) {
+            if (!video.duration || video.duration === Infinity) return;
+            // Prevent the browser from selecting text during drag
+            event.preventDefault(); 
+            
+            // Get clientX from mouse or touch event
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const newTime = calculateNewTime(clientX);
+            
+            // Temporarily update the visual position before confirming seek
+            const percent = (newTime / video.duration) * 100;
+            progressIndicator.style.width = `${percent}%`;
+            seekThumb.style.left = `calc(${percent}% - 6px)`;
+            
+            const remainingSeconds = video.duration - newTime;
+            remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
+        }
+
+        function startSeeking(event) {
+            if (!video.duration || video.duration === Infinity) return;
+            isSeeking = true;
+            // Show the overlay and thumb immediately
+            showOverlay(); 
+            seekThumb.classList.add('scale-100');
+            
+            // Start listening for drag movement
+            window.addEventListener('mousemove', handleSeek);
+            window.addEventListener('mouseup', endSeeking);
+            
+            window.addEventListener('touchmove', handleSeek);
+            window.addEventListener('touchend', endSeeking);
+
+            // Seek to the click location immediately on mousedown
+            handleSeek(event);
+        }
+
+        function endSeeking(event) {
+            if (!isSeeking) return;
+            isSeeking = false;
+            
+            // Stop listening for drag movement
+            window.removeEventListener('mousemove', handleSeek);
+            window.removeEventListener('mouseup', endSeeking);
+            
+            window.removeEventListener('touchmove', handleSeek);
+            window.removeEventListener('touchend', endSeeking);
+            
+            // Get clientX from the final event (mouse or touch end)
+            const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+            video.currentTime = calculateNewTime(clientX);
+            
+            // Resume timer for hiding controls
+            resetInactivityTimer();
+        }
+
+        // --- Fullscreen Logic ---
+
+        function toggleFullscreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                // Request fullscreen on the container so the video and controls go too
+                videoContainer.requestFullscreen().catch(err => {
+                    displayError(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            }
+        }
+
+        function updateFullscreenIcon() {
+            const isFullscreen = !!document.fullscreenElement;
+            if (isFullscreen) {
+                fullscreenEnterIcon.classList.add('hidden');
+                fullscreenExitIcon.classList.remove('hidden');
+            } else {
+                fullscreenEnterIcon.classList.remove('hidden');
+                fullscreenExitIcon.classList.add('hidden');
+            }
+        }
+
+        // --- Skip Backward Logic ---
+
+        function handleSkipBackward() {
+            // Jump back 10 seconds, but ensure currentTime is not less than 0
+            video.currentTime = Math.max(0, video.currentTime - 10);
+            resetInactivityTimer(); // Show controls temporarily after interaction
+        }
+
+        // --- Skip Forward Logic ---
+
+        function handleSkipForward() {
+            // Jump forward 10 seconds, but ensure currentTime is not greater than duration
+            video.currentTime = Math.min(video.duration, video.currentTime + 10);
+            resetInactivityTimer(); // Show controls temporarily after interaction
+        }
+
+
+        // --- Event Handlers ---
+
+        function handlePlayButtonClick() {
+            if (video.paused || video.ended) {
+                video.play().catch(e => {
+                    displayError("Play failed. User interaction may be required. Error: " + e.message);
+                });
+            } else {
+                video.pause();
+            }
+        }
+
+        function setupInactivityDetection() {
+            const container = document.getElementById('video-container');
+
+            // Listen for mouse/touch activity on the container (for hiding/showing overlay)
+            ['mousemove', 'mousedown', 'touchstart'].forEach(event => {
+                container.addEventListener(event, resetInactivityTimer);
+            });
+
+            // Handle controls
+            customPlayButton.addEventListener('click', handlePlayButtonClick);
+            fullscreenButton.addEventListener('click', toggleFullscreen); // Add fullscreen listener
+            skipBackwardButton.addEventListener('click', handleSkipBackward);
+            skipForwardButton.addEventListener('click', handleSkipForward);
+            
+            // Progress Bar Seeking Events
+            seekBar.addEventListener('mousedown', startSeeking);
+            seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); // Use passive for touchstart
+
+            // Listen for browser's fullscreen change event
+            document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
+            // Video state listeners
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('loadedmetadata', updateProgress);
+
+            video.addEventListener('pause', () => {
+                showOverlay(); 
+                togglePlayPauseIcon(true);
+                clearTimeout(inactivityTimer); 
+            });
+
+            video.addEventListener('play', () => {
+                togglePlayPauseIcon(false);
+                resetInactivityTimer();
+            });
+            
+            video.addEventListener('ended', () => {
+                showOverlay();
+                togglePlayPauseIcon(true);
+            });
+
+            // Initial state setup
+            updateProgress();
+            updateFullscreenIcon(); // Initial icon state
+            if (video.paused || video.ended) {
+                showOverlay();
+                togglePlayPauseIcon(true);
+            } else {
+                togglePlayPauseIcon(false);
+                resetInactivityTimer();
+            }
+        }
+
+        // --- HLS Initialization ---
+        
+        /** Initializes the HLS.js player for the given URL. */
+        function initHlsPlayer(url) {
+            if (Hls.isSupported()) {
+                console.log('HLS.js is supported. Initializing player.');
+                const hls = new Hls();
+
+                hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                    hls.loadSource(url);
+                });
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    console.log(`Manifest parsed. Found ${data.levels.length} quality levels.`);
+                    video.play().catch(e => console.warn("Autoplay was prevented:", e));
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    let errorMessage = `HLS Player Error: ${data.fatal ? 'Fatal' : 'Non-fatal'} error.`;
+                    
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hls.loadSource(url);
+                                break;
+                            default:
+                                hls.destroy();
+                                displayError("Fatal HLS error. Cannot play stream.");
+                                break;
+                        }
+                    } else {
+                        displayError(errorMessage + ` (${data.details})`);
+                    }
+                    console.error('HLS Error Data:', data);
+                });
+
+                hls.attachMedia(video);
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support for Safari/iOS
+                console.log('Native HLS supported by the browser.');
+                video.src = url;
+            } else {
+                displayError('Your browser does not support HLS streaming, even with hls.js.');
+            }
+            
+            // Setup custom control logic once the video element is ready
+            video.addEventListener('canplay', setupInactivityDetection, { once: true });
+        }
+
+        window.onload = () => {
+            initHlsPlayer(hlsUrl);
+        };
+    </script>
 </body>
 </html>
