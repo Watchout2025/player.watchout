@@ -1381,27 +1381,18 @@
 
             // --- Initialization ---
 
-            loadButton.addEventListener('click', () => {
-                const url = urlInput.value.trim();
-                if (url) {
-                    updateStatus('Loading stream...', 'info');
-                    loadHlsStream(url);
-                } else {
-                    updateStatus('Please enter a valid M3U8 URL.', 'error');
-                }
-            });
 
             // 1. Check for URL parameter for auto-loading
             const initialUrl = getUrlParameter('url');
 
             if (initialUrl) {
-                urlInput.value = initialUrl;
+                //urlInput.value = initialUrl;
                 updateStatus('Found URL in address bar. Loading stream automatically...', 'info');
                 loadHlsStream(initialUrl); // Auto-load the URL from the parameter
-            } else if (urlInput.value) {
+            } else if {
                 // 2. Load the default value if no parameter is present
                 updateStatus('Loading default stream...', 'info');
-                loadHlsStream(urlInput.value);
+                //loadHlsStream(urlInput.value);
             }
 
             // Populate the speed menu on load
