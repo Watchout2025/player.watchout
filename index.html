@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional HLS Video Player (Corrected)</title>
+    <title>Functional HLS Video Player (Updated Text Colors)</title>
     
 <script src="https://cdn.tailwindcss.com"></script>
     
@@ -62,6 +62,11 @@
         #subtitle-tracks-container::-webkit-scrollbar-thumb {
             background-color: #555;
             border-radius: 4px;
+        }
+
+        #audio-tracks-container::-webkit-scrollbar-track,
+        #subtitle-tracks-container::-webkit-scrollbar-track {
+            background: transparent;
         }
     </style>
 </head>
@@ -242,7 +247,9 @@
                                 <div class="flex gap-4">
                                     
 <div id="audio-tracks-container" class="flex-1 max-h-64 overflow-y-auto pr-2">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
+                                        
+                                        
+<h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
                                         <ul id="audio-list" class="space-y-1 text-sm">
                                             <li class="text-gray-400">Loading tracks...</li>
                                         </ul>
@@ -250,7 +257,9 @@
 
                                     
 <div id="subtitle-tracks-container" class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Subtitles</h4>
+                                        
+                                        
+<h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Subtitles</h4>
                                         <ul id="subtitle-list" class="space-y-1 text-sm">
                                             
 <li class="text-gray-400">Loading tracks...</li>
@@ -512,7 +521,7 @@
         /** Updates the visual position of the volume slider and thumb. */
         function updateVolumeSlider() {
             const volume = video.muted ? 0 : video.volume; 
-            const percent = volume * 100;
+            const percent = volume * 100; 
             
             volumeLevel.style.height = `${percent}%`;
             // 8px = half of the 16px thumb height
@@ -716,6 +725,7 @@
             let currentIndex = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t => t.enabled) : -1);
 
             if (tracks.length === 0) {
+                 // Use text-gray-400 for info message
                  audioList.innerHTML = '<li class="text-gray-400">No alternate audio tracks found.</li>';
             }
 
@@ -724,8 +734,10 @@
                 const trackName = getDisplayName(track, isHlsJsMode);
 
                 const li = document.createElement('li');
-                // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
-                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
+                
+                // Use text-white for selected, text-gray-400 for unselected
+                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
+                
                 li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'audio');
@@ -742,8 +754,10 @@
             // Add 'Off' option first
             const isOffSelected = (currentSubIndex === -1);
             const offLi = document.createElement('li');
-            // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
-            offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isOffSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
+            
+            // Use text-white for selected 'Off', text-gray-400 for unselected
+            offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isOffSelected ? 'font-bold text-white' : 'text-gray-400'}`;
+            
             offLi.textContent = 'Off';
             offLi.setAttribute('data-index', -1); 
             offLi.setAttribute('data-type', 'subtitle');
@@ -759,8 +773,11 @@
                 const trackName = getDisplayName(track, isHlsJsMode);
 
                 const li = document.createElement('li');
-                // Updated styles: white for selected text, subtle background for selection, readable gray for unselected
-                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white bg-gray-600/50' : 'text-gray-400'}`;
+                
+                // Use text-white for selected, text-gray-400 for unselected
+                li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
+                
+
                 li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'subtitle');
