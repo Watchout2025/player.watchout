@@ -3,141 +3,64 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Basic HLS Player</title>
+  <title>Plyr HLS Player with Audio Tracks</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#9ca3af}
-    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Arial;background:linear-gradient(180deg,#071021 0%, #07172a 100%);color:#e6eef6}
-    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
-    .player{width:900px;max-width:100%;background:rgba(10,14,20,0.6);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
-    video{width:100%;border-radius:8px;background:#000;display:block}
-    .controls{display:flex;align-items:center;gap:8px;padding:10px 6px}
-    .btn{background:transparent;border:0;color:var(--accent);font-weight:600;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .btn:active{transform:translateY(1px)}
-    .progress{flex:1;display:flex;align-items:center;gap:8px}
-    input[type=range]{-webkit-appearance:none;width:100%}
-    input[type=range]::-webkit-slider-runnable-track{height:6px;background:linear-gradient(90deg,var(--accent),#3b82f6);border-radius:6px}
-    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;margin-top:-4px}
-    .time{font-size:13px;color:var(--muted);min-width:80px;text-align:right}
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 4px}
-    .title{font-weight:700}
-    .note{font-size:12px;color:var(--muted)}
-    @media (max-width:520px){.controls{flex-wrap:wrap}.time{min-width:60px}}
+    body {background:#0f1724; color:white; font-family:Arial; display:flex; justify-content:center; align-items:center; height:100vh; margin:0}
+    .player {max-width:900px; width:95%; background:#1a2438; padding:12px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    video {width:100%; border-radius:8px; background:black;}
+    select {margin-top:10px; width:100%; padding:6px; border-radius:6px; border:1px solid #06b6d4; background:#0b1220; color:#06b6d4; cursor:pointer;}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="player" role="region" aria-label="HLS player">
-      <div class="topbar">
-        <div class="title">Basic HLS Player</div>
-        <div class="note">Source: vidmmo.com</div>
-      </div>
-
-      <video id="video" playsinline controlslist="nodownload" crossorigin="anonymous"></video>
-
-      <div class="controls">
-        <button id="playBtn" class="btn">Play</button>
-        <button id="muteBtn" class="btn">Mute</button>
-        <div class="progress">
-          <input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="seek" />
-        </div>
-        <div style="width:120px;display:flex;gap:8px;align-items:center">
-          <input id="vol" type="range" min="0" max="1" step="0.01" value="1" style="width:80px" aria-label="volume" />
-          <div class="time" id="time">0:00 / 0:00</div>
-          <button id="fsBtn" class="btn">⤢</button>
-        </div>
-      </div>
-
-      <div style="padding:8px 6px;font-size:13px;color:var(--muted)">Note: if playback fails, the browser or origin may block cross-origin requests (CORS). Run from a simple local server (e.g. <code>npx http-server</code>) or use a CORS-friendly proxy.</div>
-    </div>
+  <div class="player">
+    <video id="player" playsinline controls crossorigin="anonymous"></video>
+    <select id="audioSelect"></select>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.min.js"></script>
   <script>
-    (function(){
-      const video = document.getElementById('video');
-      const playBtn = document.getElementById('playBtn');
-      const muteBtn = document.getElementById('muteBtn');
-      const seek = document.getElementById('seek');
-      const vol = document.getElementById('vol');
-      const timeEl = document.getElementById('time');
-      const fsBtn = document.getElementById('fsBtn');
+    const video = document.getElementById('player');
+    const audioSelect = document.getElementById('audioSelect');
+    const src = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
 
-      const src = 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
+    const player = new Plyr(video, {
+      controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'fullscreen'],
+      settings: ['quality', 'speed'],
+    });
 
-      function formatTime(s){
-        if (!isFinite(s)) return '0:00';
-        const m = Math.floor(s/60);
-        const sec = Math.floor(s%60).toString().padStart(2,'0');
-        return m+':'+sec;
+    let hls;
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        updateAudioTracks();
+      });
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => updateAudioTracks());
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+    }
+
+    function updateAudioTracks() {
+      if (!hls || !hls.audioTracks) return;
+      audioSelect.innerHTML = '';
+      hls.audioTracks.forEach((track, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = track.name || track.lang || `Track ${i + 1}`;
+        audioSelect.appendChild(opt);
+      });
+      audioSelect.value = hls.audioTrack;
+    }
+
+    audioSelect.addEventListener('change', () => {
+      if (hls) {
+        hls.audioTrack = parseInt(audioSelect.value);
       }
-
-      // Attach HLS if needed
-      if (Hls.isSupported()){
-        const hls = new Hls();
-        hls.loadSource(src);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function(){
-          // optionally auto-play
-          // video.play();
-        });
-        hls.on(Hls.Events.ERROR, function(event, data){
-          console.warn('hls.js error', data);
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')){
-        // iOS Safari, some browsers
-        video.src = src;
-      } else {
-        // No HLS support
-        console.error('HLS is not supported in this browser');
-      }
-
-      // Controls
-      playBtn.addEventListener('click', async ()=>{
-        if (video.paused) {
-          try{ await video.play(); playBtn.textContent = 'Pause'; }
-          catch(e){ console.warn('play failed', e); }
-        } else {
-          video.pause(); playBtn.textContent = 'Play';
-        }
-      });
-
-      video.addEventListener('play', ()=> playBtn.textContent = 'Pause');
-      video.addEventListener('pause', ()=> playBtn.textContent = 'Play');
-
-      muteBtn.addEventListener('click', ()=>{
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
-      });
-
-      vol.addEventListener('input', ()=>{ video.volume = parseFloat(vol.value); video.muted = video.volume === 0; muteBtn.textContent = video.muted ? 'Unmute' : 'Mute'; });
-
-      video.addEventListener('timeupdate', ()=>{
-        if (video.duration){
-          const pct = (video.currentTime / video.duration) * 100;
-          seek.value = pct;
-          timeEl.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
-        }
-      });
-
-      video.addEventListener('loadedmetadata', ()=>{
-        timeEl.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
-      });
-
-      seek.addEventListener('input', ()=>{
-        if (video.duration) video.currentTime = (parseFloat(seek.value)/100) * video.duration;
-      });
-
-      fsBtn.addEventListener('click', ()=>{
-        if (document.fullscreenElement) document.exitFullscreen();
-        else video.requestFullscreen?.();
-      });
-
-      // keyboard shortcuts
-      window.addEventListener('keydown', (e)=>{
-        if (e.code === 'Space') { e.preventDefault(); if (video.paused) video.play(); else video.pause(); }
-        if (e.code === 'KeyM') { video.muted = !video.muted; muteBtn.textContent = video.muted ? 'Unmute' : 'Mute'; }
-      });
-    })();
+    });
   </script>
 </body>
 </html>
