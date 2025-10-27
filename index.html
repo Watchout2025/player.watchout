@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchOut Player | Advanced HLS Video Player</title>
+    <title>Advanced HLS Video Player</title>
     <!-- Include the hls.js library from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
@@ -623,6 +623,15 @@
                     </svg>
                 </button>
             </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="config-area">
+            <div class="url-input-group">
+                <input type="text" id="m3u8-url" placeholder="Paste your .m3u8 link here" value="https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8">
+                <button id="load-button">Load Stream</button>
+            </div>
+            <p class="status-message" id="status-message">Ready to load stream.</p>
         </div>
     </div>
 
