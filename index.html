@@ -853,6 +853,29 @@
             resetInactivityTimer();
         }
 
+        // === START: NEW FUNCTION FOR IFRAME COMMUNICATION ===
+
+        /**
+         * Sends video time information (currentTime and duration) 
+         * to the parent window via postMessage.
+         */
+        function postTimeUpdateToParent() {
+            if (window.parent !== window) { // Check if it is running inside an iframe
+                const timeData = {
+                    event: 'videoTimeUpdate', // Custom event identifier for the parent
+                    currentTime: video.currentTime,
+                    duration: video.duration,
+                    paused: video.paused
+                };
+                // WARNING: For security, replace '*' with the specific origin of the parent window 
+                // (e.g., 'https://your-parent-site.com') in a production environment.
+                window.parent.postMessage(timeData, '*'); 
+            }
+        }
+
+        // === END: NEW FUNCTION FOR IFRAME COMMUNICATION ===
+
+
         // --- Event Handlers Setup ---
 
         function setupInactivityDetection() {
@@ -892,7 +915,12 @@
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
             // Video state listeners
-            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('timeupdate', () => {
+                updateProgress();
+                // === START: CALL NEW FUNCTION ON TIMEUPDATE ===
+                postTimeUpdateToParent(); 
+                // === END: CALL NEW FUNCTION ON TIMEUPDATE ===
+            });
             video.addEventListener('progress', updateBufferProgress);
             video.addEventListener('loadedmetadata', () => {
                 updateProgress();
