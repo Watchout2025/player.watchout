@@ -888,18 +888,24 @@
 
             // Control event listeners
             topOverlay.addEventListener('click', () => {
-    // Check if it's a mobile device based on screen width
+    // Check if it's a mobile device based on screen width (768px from your CSS/JS)
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-        if (bottomOverlay.classList.contains('controls-visible')) {
-            hideControls(); // Hide controls if visible
-        } else if (bottomOverlay.classList.contains('controls-hidden')) {
-            showControls(); // Show controls if hidden
-            resetInactivityTimer();
+        // Only toggle controls when the menu is closed
+        if (audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) { 
+            if (bottomOverlay.classList.contains('controls-visible')) {
+                hideControls();
+                clearTimeout(inactivityTimer); // Ensure any running timer is stopped
+            } else {
+                showControls();
+                // CRITICAL FIX: DO NOT call resetInactivityTimer() here.
+                // The controls will now stay visible until the user taps again.
+            }
         }
     } else {
-        toggleVideoPlayPause(); // Desktop: toggle play/pause
+        // Desktop: Toggles Play/Pause and restarts the inactivity timer
+        toggleVideoPlayPause(); 
     }
 });
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
