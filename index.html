@@ -887,7 +887,16 @@
             });
 
             // Control event listeners
-            topOverlay.addEventListener('click', toggleVideoPlayPause);
+            topOverlay.addEventListener('click', () => {
+    // Check if it's a mobile device
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+    if (isMobile && bottomOverlay.classList.contains('controls-hidden')) {
+        showControls(); // Show controls if hidden
+    } else {
+        toggleVideoPlayPause(); // Otherwise toggle play/pause
+    }
+});
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
             centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
             fullscreenButton.addEventListener('click', toggleFullscreen); 
