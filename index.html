@@ -887,43 +887,20 @@
             });
 
             // Control event listeners
-            // Control event listeners
-topOverlay.addEventListener('click', (e) => {
+            topOverlay.addEventListener('click', () => {
+    // Check if it's a mobile device based on screen width
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-        e.stopPropagation(); // Prevent bubbling to container
-        
         if (bottomOverlay.classList.contains('controls-visible')) {
-            hideControls();
-            clearTimeout(inactivityTimer);
+            hideControls(); // Hide controls if visible
         } else if (bottomOverlay.classList.contains('controls-hidden')) {
-            showControls();
-            clearTimeout(inactivityTimer);
-            if (!video.paused) {
-                inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
-            }
+            showControls(); // Show controls if hidden
         }
     } else {
-        toggleVideoPlayPause();
+        toggleVideoPlayPause(); // Desktop: toggle play/pause
     }
 });
-
-// Also add these to prevent touchstart from triggering resetInactivityTimer
-topOverlay.addEventListener('touchstart', (e) => {
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) {
-        e.stopPropagation(); // Prevent bubbling to container
-    }
-});
-
-topOverlay.addEventListener('mousedown', (e) => {
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) {
-        e.stopPropagation(); // Prevent bubbling to container
-    }
-});
-
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
             centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
             fullscreenButton.addEventListener('click', toggleFullscreen); 
