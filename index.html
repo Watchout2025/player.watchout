@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional HLS Video Player (Updated Text Colors)</title>
+    <title>Functional HLS Video Player (Updated Loading UX)</title>
     
 <script src="https://cdn.tailwindcss.com"></script>
     
@@ -218,7 +218,7 @@
                                 
                                 
 <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
-                                    <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
+                                    <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
                             </svg>
                             </button>
                         </div>
@@ -398,8 +398,25 @@
         }
 
         /** Simple functions to control the loading spinner. */
-        function showLoader() { loadingIndicator.classList.remove('hidden'); }
-        function hideLoader() { loadingIndicator.classList.add('hidden'); }
+        function showLoader() { 
+            loadingIndicator.classList.remove('hidden'); 
+            // HIDE center controls when loading
+            centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        /**
+         * Hides the loader and immediately restores control visibility, 
+         * restarting the inactivity timer.
+         */
+        function hideLoader() { 
+            loadingIndicator.classList.add('hidden'); 
+            
+            // FIX: Calling resetInactivityTimer() will immediately call showControls(),
+            // which restores visibility for both the bottom bar and the center overlay,
+            // then starts the timer to hide them if the video is playing and user is inactive.
+            resetInactivityTimer();
+        }
 
         /** Converts seconds to M:SS or H:MM:SS format */
         function formatTime(totalSeconds) {
@@ -448,6 +465,14 @@
         
         /** Shows video controls (bottom bar and center skip buttons) */
         function showControls() {
+            // Check if we are currently loading, if so, only show bottom controls.
+            if (!loadingIndicator.classList.contains('hidden')) {
+                bottomOverlay.classList.remove('controls-hidden');
+                bottomOverlay.classList.add('controls-visible');
+                // The center overlay will remain hidden due to showLoader call
+                return; 
+            }
+
             // 1. Bottom Overlay (Time/Seek Bar/Buttons)
             bottomOverlay.classList.remove('controls-hidden');
             bottomOverlay.classList.add('controls-visible');
@@ -502,7 +527,7 @@
             showControls();
             
             // Hide controls only if playing, not seeking, and the menu is closed
-            if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden')) {
+            if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
@@ -546,7 +571,7 @@
         
         /** Handles the logic for playing or pausing the video. */
         function toggleVideoPlayPause() {
-            if (audioSubtitleMenu.classList.contains('hidden')) { 
+            if (audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) { 
                 if (video.paused || video.ended) {
                     video.play().catch(e => {
                         displayError("Play failed. User interaction may be required. Error: " + e.message);
