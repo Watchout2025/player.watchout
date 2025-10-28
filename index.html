@@ -526,6 +526,10 @@
             clearTimeout(inactivityTimer);
             showControls();
             
+            // Hide controls only if playing, not seeking, and the menu is closed
+            if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
+                inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
+            }
         }
         
         /** Updates the volume icon (mute/unmuted) */
@@ -884,25 +888,13 @@
 
             // Control event listeners
             topOverlay.addEventListener('click', () => {
-    // Check if it's a mobile device based on screen width (768px from your CSS/JS)
-    const isMobile = window.innerWidth <= 768;
+    // Check if it's a mobile device
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-    if (isMobile) {
-        // Only toggle controls when the menu is closed
-        if (audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) { 
-            if (bottomOverlay.classList.contains('controls-visible')) {
-                hideControls();
-                clearTimeout(inactivityTimer); // Ensure any running timer is stopped
-            } else {
-                showControls();
-                clearTimeout(inactivityTimer); 
-                // CRITICAL FIX: DO NOT call resetInactivityTimer() here.
-                // The controls will now stay visible until the user taps again.
-            }
-        }
+    if (isMobile && bottomOverlay.classList.contains('controls-hidden')) {
+        showControls(); // Show controls if hidden
     } else {
-        // Desktop: Toggles Play/Pause and restarts the inactivity timer
-        toggleVideoPlayPause(); 
+        toggleVideoPlayPause(); // Otherwise toggle play/pause
     }
 });
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
