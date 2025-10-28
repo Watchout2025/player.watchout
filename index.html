@@ -896,6 +896,7 @@
             hideControls(); // Hide controls if visible
         } else if (bottomOverlay.classList.contains('controls-hidden')) {
             showControls(); // Show controls if hidden
+            resetInactivityTimer();
         }
     } else {
         toggleVideoPlayPause(); // Desktop: toggle play/pause
