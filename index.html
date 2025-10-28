@@ -896,9 +896,6 @@
             hideControls(); // Hide controls if visible
         } else if (bottomOverlay.classList.contains('controls-hidden')) {
             showControls(); // Show controls if hidden
-            clearTimeout(inactivityTimer); // Clear any existing timer
-            // Set a longer timeout for mobile to keep controls visible
-            inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
         }
     } else {
         toggleVideoPlayPause(); // Desktop: toggle play/pause
