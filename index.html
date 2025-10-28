@@ -894,7 +894,9 @@
     if (isMobile) {
         if (bottomOverlay.classList.contains('controls-visible')) {
             hideControls(); // Hide controls if visible
-        } 
+        } else if (bottomOverlay.classList.contains('controls-hidden')) {
+            showControls(); // Show controls if hidden
+        }
     } else {
         toggleVideoPlayPause(); // Desktop: toggle play/pause
     }
