@@ -526,10 +526,6 @@
             clearTimeout(inactivityTimer);
             showControls();
             
-            // Hide controls only if playing, not seeking, and the menu is closed
-            if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
-                inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
-            }
         }
         
         /** Updates the volume icon (mute/unmuted) */
@@ -899,6 +895,7 @@
                 clearTimeout(inactivityTimer); // Ensure any running timer is stopped
             } else {
                 showControls();
+                clearTimeout(inactivityTimer); 
                 // CRITICAL FIX: DO NOT call resetInactivityTimer() here.
                 // The controls will now stay visible until the user taps again.
             }
