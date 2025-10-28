@@ -888,17 +888,13 @@
 
             // Control event listeners
             topOverlay.addEventListener('click', () => {
-    // Check if it's a mobile device based on screen width
-    const isMobile = window.innerWidth <= 768;
+    // Check if it's a mobile device
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-    if (isMobile) {
-        if (bottomOverlay.classList.contains('controls-visible')) {
-            hideControls(); // Hide controls if visible
-        } else if (bottomOverlay.classList.contains('controls-hidden')) {
-            showControls(); // Show controls if hidden
-        }
+    if (isMobile && bottomOverlay.classList.contains('controls-hidden')) {
+        showControls(); // Show controls if hidden
     } else {
-        toggleVideoPlayPause(); // Desktop: toggle play/pause
+        toggleVideoPlayPause(); // Otherwise toggle play/pause
     }
 });
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
