@@ -887,26 +887,28 @@
             });
 
             // Control event listeners
-            topOverlay.addEventListener('click', () => {
-   const elements = [
-  document.getElementById("center-controls-mobile-only"),
-  document.getElementById("controls-bar")
-];
+           topOverlay.addEventListener('click', () => {
+  const isMobile = window.innerWidth <= 768; // you can adjust breakpoint if needed
 
-elements.forEach(el => {
-  if (el.style.display === "none") {
-    el.style.display = "flex"; // show
+  if (isMobile) {
+    const elements = [
+      document.getElementById("center-controls-mobile-only"),
+      document.getElementById("controls-bar")
+    ];
+
+    // Check if any element is hidden
+    const anyHidden = elements.some(el => el.style.display === "none");
+
+    if (anyHidden) {
+      elements.forEach(el => el.style.display = "flex"); // show
+    } else {
+      elements.forEach(el => el.style.display = "none"); // hide
+    }
   } else {
-    el.style.display = "none"; // hide
+    toggleVideoPlayPause(); // only on desktop
   }
 });
 
-
-
-    } else {
-        toggleVideoPlayPause(); // Otherwise toggle play/pause
-    }
-});
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
             centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
             fullscreenButton.addEventListener('click', toggleFullscreen); 
