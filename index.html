@@ -893,7 +893,14 @@
 
     if (isMobile) {
         //showControls(); // Show controls if hidden
-        document.getElementById("center-controls-mobile-only").style.display = "none";
+        const el = document.getElementById("center-controls-mobile-only");
+
+if (el.style.display === "none") {
+  el.style.display = "flex"; // show as flex
+} else {
+  el.style.display = "none"; // hide
+}
+
 
     } else {
         toggleVideoPlayPause(); // Otherwise toggle play/pause
