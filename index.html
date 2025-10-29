@@ -888,18 +888,19 @@
 
             // Control event listeners
             topOverlay.addEventListener('click', () => {
-    // Check if it's a mobile device
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+   const elements = [
+  document.getElementById("center-controls-mobile-only"),
+  document.getElementById("controls-bar")
+];
 
-    if (isMobile) {
-        //showControls(); // Show controls if hidden
-        const el = document.getElementById("center-controls-mobile-only");
+elements.forEach(el => {
+  if (el.style.display === "none") {
+    el.style.display = "flex"; // show
+  } else {
+    el.style.display = "none"; // hide
+  }
+});
 
-if (el.style.display === "none") {
-  el.style.display = "flex"; // show as flex
-} else {
-  el.style.display = "none"; // hide
-}
 
 
     } else {
