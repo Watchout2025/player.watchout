@@ -847,34 +847,53 @@
         }
 
         function restoreVideoProgress() {
-            if (hasRestoredPosition) return;
+    if (hasRestoredPosition) return;
+    
+    if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
+        console.log('Waiting for video duration...');
+        return;
+    }
+    
+    try {
+        const stored = localStorage.getItem(videoStorageKey);
+        
+        if (stored) {
+            const progressData = JSON.parse(stored);
             
-            if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
-                console.log('Waiting for video duration...');
-                return;
-            }
-            
-            try {
-                const stored = localStorage.getItem(videoStorageKey);
+            if (progressData.url === hlsUrl && 
+                progressData.currentTime > 1 && 
+                progressData.currentTime < video.duration - 5) {
                 
-                if (stored) {
-                    const progressData = JSON.parse(stored);
-                    
-                    if (progressData.url === hlsUrl && 
-                        progressData.currentTime > 1 && 
-                        progressData.currentTime < video.duration - 5) {
-                        
+                hasRestoredPosition = true;
+                console.log('Will restore video position:', progressData.currentTime);
+                
+                // Wait for video to have enough data before seeking
+                const seekWhenReady = () => {
+                    if (video.readyState >= 2) { // HAVE_CURRENT_DATA or better
                         video.currentTime = progressData.currentTime;
-                        hasRestoredPosition = true;
                         console.log('Restored video position:', progressData.currentTime);
                         showResumeNotification(progressData.currentTime);
+                    } else {
+                        // If not ready, try seeking anyway and let the browser handle it
+                        video.currentTime = progressData.currentTime;
+                        console.log('Seeking to:', progressData.currentTime);
+                        showResumeNotification(progressData.currentTime);
                     }
+                };
+                
+                // Try to seek immediately or wait for canplay
+                if (video.readyState >= 2) {
+                    seekWhenReady();
+                } else {
+                    video.addEventListener('canplay', seekWhenReady, { once: true });
                 }
-            } catch (error) {
-                console.log('No saved progress found or error restoring:', error);
-                hasRestoredPosition = true;
             }
         }
+    } catch (error) {
+        console.log('No saved progress found or error restoring:', error);
+        hasRestoredPosition = true;
+    }
+}
 
         function showResumeNotification(time) {
             const notification = document.createElement('div');
