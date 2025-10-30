@@ -843,25 +843,34 @@
         }
 
         async function restoreVideoProgress() {
-            if (hasRestoredPosition) return;
-            try {
-                const result = await window.storage.get(videoStorageKey);
-                if (result && result.value) {
-                    const progressData = JSON.parse(result.value);
-                    if (progressData.url === hlsUrl && 
-                        progressData.currentTime > 1 && 
-                        progressData.currentTime < video.duration - 5) {
-                        video.currentTime = progressData.currentTime;
-                        hasRestoredPosition = true;
-                        console.log('Restored video position:', progressData.currentTime);
-                        showResumeNotification(progressData.currentTime);
-                    }
-                }
-            } catch (error) {
-                console.log('No saved progress found or error restoring:', error);
+    if (hasRestoredPosition) return;
+    
+    // Wait for duration to be available
+    if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
+        console.log('Waiting for video duration...');
+        return;
+    }
+    
+    try {
+        const result = await window.storage.get(videoStorageKey);
+        if (result && result.value) {
+            const progressData = JSON.parse(result.value);
+            if (progressData.url === hlsUrl && 
+                progressData.currentTime > 1 && 
+                progressData.currentTime < video.duration - 5) {
+                
+                // Set the time directly
+                video.currentTime = progressData.currentTime;
                 hasRestoredPosition = true;
+                console.log('Restored video position:', progressData.currentTime);
+                showResumeNotification(progressData.currentTime);
             }
         }
+    } catch (error) {
+        console.log('No saved progress found or error restoring:', error);
+        hasRestoredPosition = true;
+    }
+}
 
         function showResumeNotification(time) {
             const notification = document.createElement('div');
