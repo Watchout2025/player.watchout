@@ -61,6 +61,12 @@
     height: 3rem;
     padding: 0.625rem !important;
         }
+        @media (min-width: 768px) {
+    .#mobile-skip-backward-button {
+        --tw-space-x-reverse: 0;
+        margin-right: calc(2.5rem * var(--tw-space-x-reverse));
+    }
+}
     @media (min-width: 768px) {
     .bottom-control-button {
         width: 3rem;
@@ -146,7 +152,7 @@
              class="items-center flex-col absolute left-1/2 right-1/2 inset-0 flex items-center justify-center z-10 transition-opacity duration-500 opacity-100 pointer-events-auto">
             
             
-<div id="center-controls-mobile-only" class="justify-center flex items-center space-x-6 md:space-x-10">
+<div id="center-controls-mobile-only" class="justify-center flex items-center space-x-6 ">
                 
                 
 <button id="mobile-skip-backward-button" 
