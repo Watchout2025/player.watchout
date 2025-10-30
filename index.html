@@ -410,8 +410,6 @@
         const centerPlayPauseButton = document.getElementById('center-play-pause-button');
         const centerPlayIcon = document.getElementById('center-play-icon');
         const centerPauseIcon = document.getElementById('center-pause-icon');
-
-        
         const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-button');
         const mobileSkipForwardButton = document.getElementById('mobile-skip-forward-button');
 
@@ -420,20 +418,24 @@
         const urlParams = new URLSearchParams(window.location.search);
         const hlsUrl = urlParams.get('url') || 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
         
-        let hlsInstance = null; // Store the Hls instance
-        let isHlsJsMode = false; // Flag to determine if hls.js is being used
+        let hlsInstance = null;
+        let isHlsJsMode = false;
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 3000;
         let isSeeking = false; 
         let isVolumeAdjusting = false; 
         let lastKnownVolume = 0.5; 
-        
         let currentMouseMoveHandler = null; 
-        let currentTouchMoveHandler = null; 
+        let currentTouchMoveHandler = null;
         
-        // --- Language Code Mapping (ISO 639-1/2 to Full Name) ---
+        // --- VIDEO RESUME STATE ---
+        let videoStorageKey = null;
+        let hasRestoredPosition = false;
+        let saveProgressInterval = null;
+        
+        // --- Language Code Mapping ---
         const languageCodeMap = {
-            'eng': 'English', 'en': 'English', 'und': 'Undefined', // Common defaults
+            'eng': 'English', 'en': 'English', 'und': 'Undefined',
             'hin': 'Hindi', 'hi': 'Hindi',
             'tel': 'Telugu', 'te': 'Telugu',
             'tam': 'Tamil', 'ta': 'Tamil',
@@ -450,50 +452,32 @@
             'kor': 'Korean', 'ko': 'Korean',
         };
 
-        /** Attempts to translate a short language code (e.g., 'eng') to a full name (e.g., 'English'). */
         function getFullLanguageName(code) {
             if (!code) return '';
             const lowerCode = code.toLowerCase();
-            
-            // 1. Check if the full name is in the map
             if (languageCodeMap[lowerCode]) {
                 return languageCodeMap[lowerCode];
             }
-            
-            // 2. Fallback: If it's not a common code, just capitalize the first letter
             return code.charAt(0).toUpperCase() + code.slice(1);
         }
 
-
-        /** Utility function to display an error message to the user. */
         function displayError(message) {
             console.error(message);
             errorMessageDiv.textContent = message;
             errorMessageDiv.classList.remove('hidden');
         }
 
-        /** Simple functions to control the loading spinner. */
         function showLoader() { 
             loadingIndicator.classList.remove('hidden'); 
-            // HIDE center controls when loading
             centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
             centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
         }
 
-        /**
-         * Hides the loader and immediately restores control visibility, 
-         * restarting the inactivity timer.
-         */
         function hideLoader() { 
             loadingIndicator.classList.add('hidden'); 
-            
-            // FIX: Calling resetInactivityTimer() will immediately call showControls(),
-            // which restores visibility for both the bottom bar and the center overlay,
-            // then starts the timer to hide them if the video is playing and user is inactive.
             resetInactivityTimer();
         }
 
-        /** Converts seconds to M:SS or H:MM:SS format */
         function formatTime(totalSeconds) {
             if (isNaN(totalSeconds) || totalSeconds < 0) return '0:00';
             const seconds = Math.floor(totalSeconds % 60);
@@ -508,7 +492,6 @@
             }
         }
 
-        /** Updates the visual buffer progress bar */
         function updateBufferProgress() {
             if (!video.duration || video.duration === Infinity) return;
             const buffered = video.buffered;
@@ -524,54 +507,37 @@
             bufferIndicator.style.width = `${Math.min(100, percent)}%`;
         }
 
-        /** Updates the progress bar position and time displays */
         function updateProgress() {
             if (!video.duration || isSeeking) return;
             const percent = (video.currentTime / video.duration) * 100;
             progressIndicator.style.width = `${percent}%`;
-            
-            // Adjust for seek thumb width (3px = half of 6px thumb)
             const thumbPosition = `calc(${percent}% - 3px)`; 
             seekThumb.style.left = thumbPosition;
-            
             const remainingSeconds = video.duration - video.currentTime;
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
         
-        /** Shows video controls (bottom bar and center skip buttons) */
         function showControls() {
-            // Check if we are currently loading, if so, only show bottom controls.
             if (!loadingIndicator.classList.contains('hidden')) {
                 bottomOverlay.classList.remove('controls-hidden');
                 bottomOverlay.classList.add('controls-visible');
-                // The center overlay will remain hidden due to showLoader call
                 return; 
             }
-
-            // 1. Bottom Overlay (Time/Seek Bar/Buttons)
             bottomOverlay.classList.remove('controls-hidden');
             bottomOverlay.classList.add('controls-visible');
-
-            // 2. Center Overlay (Skip Buttons / Center Play Button)
             centerPlayPauseOverlay.classList.remove('opacity-0', 'pointer-events-none');
             centerPlayPauseOverlay.classList.add('opacity-100', 'pointer-events-auto');
         }
 
-        /** Hides video controls (bottom bar and center skip buttons) */
         function hideControls() {
-            // Do not hide controls if the audio/subtitle menu is open
             if(audioSubtitleMenu.classList.contains('hidden')) {
-                // 1. Bottom Overlay
                 bottomOverlay.classList.remove('controls-visible');
                 bottomOverlay.classList.add('controls-hidden');
-
-                // 2. Center Overlay
                 centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
                 centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
             }
         }
         
-        /** Toggles the play/pause icon in the bottom controls bar. */
         function updateBottomPlayPauseIcon(isPaused) {
             if (isPaused) {
                 playIcon.classList.remove('hidden');
@@ -582,11 +548,8 @@
             }
         }
 
-        /** Updates the large center play/pause icon based on pause state. */
         function updateCenterPlayPauseIcon(isPaused) {
-            // Fix for Bug #2: The button itself is the click target and must remain visible
             centerPlayPauseButton.classList.remove('hidden'); 
-
             if (isPaused) {
                 centerPlayIcon.classList.remove('hidden');
                 centerPauseIcon.classList.add('hidden');
@@ -596,18 +559,14 @@
             }
         }
 
-        /** Resets the timer that automatically hides the controls after inactivity. */
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
             showControls();
-            
-            // Hide controls only if playing, not seeking, and the menu is closed
             if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
                 inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
             }
         }
         
-        /** Updates the volume icon (mute/unmuted) */
         function updateMuteIcon() {
             if (video.muted || video.volume === 0) {
                 volumeOnIcon.classList.add('hidden');
@@ -618,22 +577,16 @@
             }
         }
 
-        /** Updates the visual position of the volume slider and thumb. */
         function updateVolumeSlider() {
             const volume = video.muted ? 0 : video.volume; 
             const percent = volume * 100; 
-            
             volumeLevel.style.height = `${percent}%`;
-            // 8px = half of the 16px thumb height
             volumeThumbControl.style.bottom = `calc(${percent}% - 8px)`;
-            
             updateMuteIcon();
         }
 
-        /** Mutes or unmutes the video. */
         function toggleMute() {
             if (video.muted) {
-                // Restore previous volume or default to 0.5
                 video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
                 video.muted = false;
             } else {
@@ -644,7 +597,6 @@
             resetInactivityTimer();
         }
         
-        /** Handles the logic for playing or pausing the video. */
         function toggleVideoPlayPause() {
             if (audioSubtitleMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) { 
                 if (video.paused || video.ended) {
@@ -657,7 +609,6 @@
             }
         }
         
-        /** Calculates the time based on the seek bar click position. */
         function calculateNewTime(clientX) {
             const rect = seekBar.getBoundingClientRect();
             let clickPosition = clientX - rect.left;
@@ -667,49 +618,36 @@
             return video.duration * seekRatio;
         }
 
-        /** Visually updates the seek bar position during a drag/seek event. */
         function handleSeek(clientX) {
             if (!video.duration || video.duration === Infinity) return;
             const newTime = calculateNewTime(clientX);
             const percent = (newTime / video.duration) * 100;
             progressIndicator.style.width = `${percent}%`;
-            
-            // Adjust for seek thumb width (3px = half of 6px thumb)
             seekThumb.style.left = `calc(${percent}% - 3px)`; 
-            
             const remainingSeconds = video.duration - newTime;
             remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
         }
 
-        /** Starts the seeking process (on mousedown/touchstart). */
         function startSeeking(event) {
             if (!video.duration || video.duration === Infinity) return;
             isSeeking = true;
             showControls(); 
             seekThumb.classList.add('scale-100');
-            
-            // Define move handlers dynamically
             currentMouseMoveHandler = (e) => handleSeek(e.clientX);
             currentTouchMoveHandler = (e) => handleSeek(e.touches[0].clientX);
-            
             window.addEventListener('mousemove', currentMouseMoveHandler);
             window.addEventListener('mouseup', endSeeking);
             window.addEventListener('touchmove', currentTouchMoveHandler, { passive: true });
             window.addEventListener('touchend', endSeeking);
-            
-            // Perform initial seek
             handleSeek(event.touches ? event.touches[0].clientX : event.clientX);
         }
 
-        /** Ends the seeking process and sets the video currentTime (on mouseup/touchend). */
         function endSeeking(event) {
             if (!isSeeking) return;
             const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
             video.currentTime = calculateNewTime(clientX);
             isSeeking = false;
             seekThumb.classList.remove('scale-100');
-            
-            // Cleanup listeners
             if (currentMouseMoveHandler) {
                 window.removeEventListener('mousemove', currentMouseMoveHandler);
                 currentMouseMoveHandler = null;
@@ -719,7 +657,6 @@
             resetInactivityTimer();
         }
 
-        /** Toggles native fullscreen mode. */
         function toggleFullscreen() {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
@@ -730,7 +667,6 @@
             }
         }
 
-        /** Updates the fullscreen button icon based on state. */
         function updateFullscreenIcon() {
             const isFullscreen = !!document.fullscreenElement;
             if (isFullscreen) {
@@ -742,22 +678,18 @@
             }
         }
 
-        /** Jumps backward 10 seconds. */
         function handleSkipBackward() {
             video.currentTime = Math.max(0, video.currentTime - 10);
             resetInactivityTimer(); 
         }
 
-        /** Jumps forward 10 seconds. */
         function handleSkipForward() {
             video.currentTime = Math.min(video.duration, video.currentTime + 10);
             resetInactivityTimer();
         }
 
-        /** Toggles the visibility of the Audio/Subtitle menu. */
         function toggleAudioSubtitleMenu() {
             const isCurrentlyHidden = audioSubtitleMenu.classList.contains('hidden');
-
             if (isCurrentlyHidden) {
                 renderTracksMenu(); 
                 audioSubtitleMenu.classList.remove('hidden');
@@ -769,12 +701,10 @@
             }
         }
         
-        /** Handles closing the menu if a click occurs outside the menu or toggle button. */
         function handleDocumentClick(event) {
             if (!audioSubtitleMenu.classList.contains('hidden')) {
                 const isClickInsideMenu = audioSubtitleMenu.contains(event.target);
                 const isClickOnToggle = audioSubtitleToggle.contains(event.target);
-                
                 if (!isClickInsideMenu && !isClickOnToggle) {
                     audioSubtitleMenu.classList.add('hidden');
                     resetInactivityTimer(); 
@@ -782,62 +712,43 @@
             }
         }
 
-        /** Renders the dynamic audio and subtitle lists based on HLS or Native API. */
         function renderTracksMenu() {
             audioList.innerHTML = '';
             subtitleList.innerHTML = '';
             
-            // --- Track Name Generation Logic (Fix for Bug #1) ---
             const getDisplayName = (track, isHls) => {
                 const rawLangCode = isHls ? track.lang : track.language;
                 const primaryLabel = isHls ? track.name : track.label;
                 let trackName = '';
-
-                // 1. Prioritize translation of the official language code (e.g., 'eng' -> 'English')
                 if (rawLangCode) {
                     trackName = getFullLanguageName(rawLangCode);
                 }
-
-                // 2. If the primary label exists, check if it's a known short code or a better display name
                 if (primaryLabel) {
                     const lowerLabel = primaryLabel.toLowerCase();
-
-                    // Check if the primary label itself is a known short code (e.g., label is 'eng', not 'English')
                     if (languageCodeMap[lowerLabel]) {
-                        trackName = languageCodeMap[lowerLabel]; // Use the full name from the map
-                    }
-                    // If the explicit label is not a short code, and we only had a fallback name before (like 'Und' or empty), use the label.
-                    else if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === rawLangCode.toLowerCase()) {
+                        trackName = languageCodeMap[lowerLabel];
+                    } else if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === rawLangCode.toLowerCase()) {
                         trackName = primaryLabel;
                     }
                 }
-
-                // 3. Final Fallback
                 if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === 'und') {
                     return `Track ${track.id || track.groupId}`;
                 }
-                
                 return trackName;
             };
 
-            // --- 1. AUDIO TRACKS ---
             let tracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
             let currentIndex = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t => t.enabled) : -1);
 
             if (tracks.length === 0) {
-                 // Use text-gray-400 for info message
                  audioList.innerHTML = '<li class="text-gray-400">No alternate audio tracks found.</li>';
             }
 
             tracks.forEach((track, index) => {
                 const isSelected = isHlsJsMode ? (index === currentIndex) : (track.enabled);
                 const trackName = getDisplayName(track, isHlsJsMode);
-
                 const li = document.createElement('li');
-                
-                // Use text-white for selected, text-gray-400 for unselected
                 li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-                
                 li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'audio');
@@ -845,19 +756,12 @@
                 audioList.appendChild(li);
             });
             
-            // --- 2. SUBTITLE TRACKS ---
             let subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions') : []);
-            
-            // HLS.js uses -1 for 'Off', Native API uses 'disabled' mode
             let currentSubIndex = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t => t.mode === 'showing');
 
-            // Add 'Off' option first
             const isOffSelected = (currentSubIndex === -1);
             const offLi = document.createElement('li');
-            
-            // Use text-white for selected 'Off', text-gray-400 for unselected
             offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isOffSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-            
             offLi.textContent = 'Off';
             offLi.setAttribute('data-index', -1); 
             offLi.setAttribute('data-type', 'subtitle');
@@ -871,33 +775,24 @@
             subTracks.forEach((track, index) => {
                 const isSelected = isHlsJsMode ? (index === currentSubIndex) : (track.mode === 'showing');
                 const trackName = getDisplayName(track, isHlsJsMode);
-
                 const li = document.createElement('li');
-                
-                // Use text-white for selected, text-gray-400 for unselected
                 li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-                
-
                 li.textContent = trackName;
                 li.setAttribute('data-index', index);
                 li.setAttribute('data-type', 'subtitle');
                 li.addEventListener('click', () => handleTrackSelection('subtitle', index));
                 subtitleList.appendChild(li);
-                
-                // Native Text Track Mode Change Listener (Crucial for live updates on iOS)
                 if (!isHlsJsMode) {
                     track.onchange = renderTracksMenu;
                 }
             });
         }
 
-        /** Handles the track selection and switches the active track using the appropriate API. */
         function handleTrackSelection(type, index) {
             if (type === 'audio') {
                 if (isHlsJsMode && hlsInstance) {
                     hlsInstance.audioTrack = index;
                 } else if (video.audioTracks) {
-                    // Native API: Toggle the 'enabled' property
                     const nativeAudioTracks = video.audioTracks;
                     for (let i = 0; i < nativeAudioTracks.length; i++) {
                         nativeAudioTracks[i].enabled = (i === index); 
@@ -905,95 +800,157 @@
                 }
             } else if (type === 'subtitle') {
                 if (isHlsJsMode && hlsInstance) {
-                    hlsInstance.subtitleTrack = index; // HLS.js handles -1 for 'Off'
+                    hlsInstance.subtitleTrack = index;
                 } else if (video.textTracks) {
-                    // Native API: Toggle the 'mode' property
                     const nativeTextTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-                    
                     nativeTextTracks.forEach((track, i) => {
                         if (index === -1) {
-                             track.mode = 'disabled'; // Turn all off
+                             track.mode = 'disabled';
                         } else if (i === index) {
-                             track.mode = 'showing'; // Turn selected one on
+                             track.mode = 'showing';
                         } else {
-                             track.mode = 'disabled'; // Turn others off
+                             track.mode = 'disabled';
                         }
                     });
                 }
             }
-
-            // Immediately close the menu and re-render the list to reflect the change
             audioSubtitleMenu.classList.add('hidden');
             renderTracksMenu(); 
             resetInactivityTimer();
         }
 
-        // === START: NEW FUNCTION FOR IFRAME COMMUNICATION ===
+        // === VIDEO RESUME FUNCTIONS (localStorage) ===
 
-        /**
-         * Sends video time information (currentTime and duration) 
-         * to the parent window via postMessage.
-         */
+        function generateStorageKey(url) {
+            const key = `video_progress:${url}`;
+            console.log('Storage key generated:', key);
+            return key;
+        }
+
+        function saveVideoProgress() {
+            if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
+            if (video.currentTime < 1 || video.currentTime > video.duration - 5) return;
+            
+            try {
+                const progressData = {
+                    currentTime: video.currentTime,
+                    duration: video.duration,
+                    timestamp: Date.now(),
+                    url: hlsUrl
+                };
+                
+                localStorage.setItem(videoStorageKey, JSON.stringify(progressData));
+                console.log('Video progress saved:', progressData.currentTime);
+            } catch (error) {
+                console.error('Failed to save video progress:', error);
+            }
+        }
+
+        function restoreVideoProgress() {
+            if (hasRestoredPosition) return;
+            
+            if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
+                console.log('Waiting for video duration...');
+                return;
+            }
+            
+            try {
+                const stored = localStorage.getItem(videoStorageKey);
+                
+                if (stored) {
+                    const progressData = JSON.parse(stored);
+                    
+                    if (progressData.url === hlsUrl && 
+                        progressData.currentTime > 1 && 
+                        progressData.currentTime < video.duration - 5) {
+                        
+                        video.currentTime = progressData.currentTime;
+                        hasRestoredPosition = true;
+                        console.log('Restored video position:', progressData.currentTime);
+                        showResumeNotification(progressData.currentTime);
+                    }
+                }
+            } catch (error) {
+                console.log('No saved progress found or error restoring:', error);
+                hasRestoredPosition = true;
+            }
+        }
+
+        function showResumeNotification(time) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-4 py-2 rounded-lg text-sm z-50 transition-opacity duration-300';
+            notification.textContent = `Resumed from ${formatTime(time)}`;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+
+        function clearVideoProgress() {
+            try {
+                localStorage.removeItem(videoStorageKey);
+                console.log('Video progress cleared');
+            } catch (error) {
+                console.error('Failed to clear video progress:', error);
+            }
+        }
+
+        function startProgressSaving() {
+            saveProgressInterval = setInterval(saveVideoProgress, 5000);
+            video.addEventListener('pause', saveVideoProgress);
+            video.addEventListener('seeking', saveVideoProgress);
+            video.addEventListener('ended', clearVideoProgress);
+            window.addEventListener('beforeunload', saveVideoProgress);
+        }
+
+        // === IFRAME COMMUNICATION ===
+
         function postTimeUpdateToParent() {
-            if (window.parent !== window) { // Check if it is running inside an iframe
+            if (window.parent !== window) {
                 const timeData = {
-                    event: 'videoTimeUpdate', // Custom event identifier for the parent
+                    event: 'videoTimeUpdate',
                     currentTime: video.currentTime,
                     duration: video.duration,
                     paused: video.paused
                 };
-                // WARNING: For security, replace '*' with the specific origin of the parent window 
-                // (e.g., 'https://your-parent-site.com') in a production environment.
                 window.parent.postMessage(timeData, '*'); 
             }
         }
 
-        // === END: NEW FUNCTION FOR IFRAME COMMUNICATION ===
-
-
-        // --- Event Handlers Setup ---
+        // === EVENT HANDLERS ===
 
         function setupInactivityDetection() {
             const container = document.getElementById('video-container');
-
-            // Inactivity/Controls Visibility
             ['mousemove', 'mousedown', 'touchstart'].forEach(event => {
                 container.addEventListener(event, resetInactivityTimer);
             });
 
-            // Control event listeners
-           topOverlay.addEventListener('click', () => {
-  const isMobile = window.innerWidth <= 1000; // you can adjust breakpoint if needed
-
-  if (isMobile) {
-    const elements = [
-      document.getElementById("center-controls-mobile-only"),
-      document.getElementById("controls-bar")
-    ];
-
-    // Check if any element is hidden
-    const anyHidden = elements.some(el => el.style.display === "none");
-
-    if (anyHidden) {
-      elements.forEach(el => el.style.display = "flex"); // show
-    } else {
-      elements.forEach(el => el.style.display = "none"); // hide
-    }
-  } else {
-    toggleVideoPlayPause(); // only on desktop
-  }
-});
+            topOverlay.addEventListener('click', () => {
+                const isMobile = window.innerWidth <= 1000;
+                if (isMobile) {
+                    const elements = [
+                        document.getElementById("center-controls-mobile-only"),
+                        document.getElementById("controls-bar")
+                    ];
+                    const anyHidden = elements.some(el => el.style.display === "none");
+                    if (anyHidden) {
+                        elements.forEach(el => el.style.display = "flex");
+                    } else {
+                        elements.forEach(el => el.style.display = "none");
+                    }
+                } else {
+                    toggleVideoPlayPause();
+                }
+            });
 
             customPlayButton.addEventListener('click', toggleVideoPlayPause);
             centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
             fullscreenButton.addEventListener('click', toggleFullscreen); 
             skipBackwardButton.addEventListener('click', handleSkipBackward);
             skipForwardButton.addEventListener('click', handleSkipForward);
-            
-            // Mobile skip buttons
             mobileSkipBackwardButton.addEventListener('click', handleSkipBackward);
             mobileSkipForwardButton.addEventListener('click', handleSkipForward);
-
             muteButton.addEventListener('click', toggleMute); 
             audioSubtitleToggle.addEventListener('click', (e) => {
                 e.stopPropagation(); 
@@ -1002,20 +959,15 @@
             document.addEventListener('click', handleDocumentClick); 
             seekBar.addEventListener('mousedown', startSeeking);
             seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
-
-            // Volume visibility handlers
             volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
             volumeControlWrapper.addEventListener('mouseleave', () => {
                  setTimeout(() => { if (!isVolumeAdjusting) { volumeSliderContainer.classList.add('hidden'); } }, 300);
             });
             document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
-            // Video state listeners
             video.addEventListener('timeupdate', () => {
                 updateProgress();
-                // === START: CALL NEW FUNCTION ON TIMEUPDATE ===
                 postTimeUpdateToParent(); 
-                // === END: CALL NEW FUNCTION ON TIMEUPDATE ===
             });
             video.addEventListener('progress', updateBufferProgress);
             video.addEventListener('loadedmetadata', () => {
@@ -1027,20 +979,17 @@
             video.addEventListener('waiting', showLoader);
             video.addEventListener('playing', hideLoader);
             video.addEventListener('canplay', hideLoader);
-
             video.addEventListener('pause', () => {
-                showControls(); // Show all controls (bottom bar and center container)
+                showControls();
                 updateBottomPlayPauseIcon(true);
                 updateCenterPlayPauseIcon(true); 
                 clearTimeout(inactivityTimer); 
             });
-
             video.addEventListener('play', () => {
                 updateBottomPlayPauseIcon(false);
                 updateCenterPlayPauseIcon(false); 
                 resetInactivityTimer();
             });
-            
             video.addEventListener('ended', () => {
                 showControls();
                 updateBottomPlayPauseIcon(true);
@@ -1048,20 +997,16 @@
                 hideLoader(); 
             });
             
-            // Native Audio Track Change Listener (iOS/Native HLS)
             if (!isHlsJsMode && video.audioTracks) {
                 video.audioTracks.addEventListener('change', renderTracksMenu);
             }
 
-
-            // Initial state setup
             lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
             updateProgress();
             updateBufferProgress(); 
             updateVolumeSlider(); 
             updateFullscreenIcon(); 
             
-            // Apply initial state for controls
             if (video.paused || video.ended) { 
                 showControls();
                 updateBottomPlayPauseIcon(true);
@@ -1073,7 +1018,8 @@
             }
         }
         
-        // --- Volume Slider Adjusting Logic ---
+        // === VOLUME SLIDER ===
+        
         function calculateNewVolume(clientY) {
             const rect = volumeSliderTrack.getBoundingClientRect();
             let distance = rect.bottom - clientY;
@@ -1117,16 +1063,137 @@
             resetInactivityTimer();
             volumeSliderContainer.classList.add('hidden');
         }
+        
         volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
         volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
 
-
-        // --- HLS Initialization ---
+        // === KEYBOARD SHORTCUTS ===
         
-        /** Initializes the HLS.js player for the given URL. */
+        function handleKeyboardShortcuts(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            const preventDefaultKeys = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            if (preventDefaultKeys.includes(event.code)) {
+                event.preventDefault();
+            }
+
+            switch(event.code) {
+                case 'Space':
+                case 'KeyK':
+                    toggleVideoPlayPause();
+                    break;
+                
+                case 'ArrowLeft':
+                    video.currentTime = Math.max(0, video.currentTime - 5);
+                    resetInactivityTimer();
+                    break;
+                
+                case 'ArrowRight':
+                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                    resetInactivityTimer();
+                    break;
+                
+                case 'KeyJ':
+                    handleSkipBackward();
+                    break;
+                
+                case 'KeyL':
+                    handleSkipForward();
+                    break;
+                
+                case 'ArrowUp':
+                    event.preventDefault();
+                    video.volume = Math.min(1, video.volume + 0.05);
+                    video.muted = false;
+                    lastKnownVolume = video.volume;
+                    updateVolumeSlider();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'ArrowDown':
+                    event.preventDefault();
+                    video.volume = Math.max(0, video.volume - 0.05);
+                    if (video.volume === 0) {
+                        video.muted = true;
+                    }
+                    updateVolumeSlider();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'KeyM':
+                    toggleMute();
+                    break;
+                
+                case 'KeyF':
+                    toggleFullscreen();
+                    break;
+                
+                case 'KeyC':
+                    if (isHlsJsMode && hlsInstance) {
+                        const currentSub = hlsInstance.subtitleTrack;
+                        hlsInstance.subtitleTrack = currentSub === -1 ? 0 : -1;
+                    } else if (video.textTracks) {
+                        const textTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+                        const anyShowing = textTracks.some(t => t.mode === 'showing');
+                        textTracks.forEach((track, i) => {
+                            track.mode = anyShowing ? 'disabled' : (i === 0 ? 'showing' : 'disabled');
+                        });
+                    }
+                    renderTracksMenu();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Digit0':
+                case 'Digit1':
+                case 'Digit2':
+                case 'Digit3':
+                case 'Digit4':
+                case 'Digit5':
+                case 'Digit6':
+                case 'Digit7':
+                case 'Digit8':
+                case 'Digit9':
+                    const digit = parseInt(event.code.replace('Digit', ''));
+                    video.currentTime = (video.duration * digit) / 10;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Home':
+                    video.currentTime = 0;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'End':
+                    video.currentTime = video.duration;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Comma':
+                    if (video.paused) {
+                        video.currentTime = Math.max(0, video.currentTime - (1/30));
+                        resetInactivityTimer();
+                    }
+                    break;
+                
+                case 'Period':
+                    if (video.paused) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + (1/30));
+                        resetInactivityTimer();
+                    }
+                    break;
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyboardShortcuts);
+
+        // === HLS INITIALIZATION ===
+        
         function initHlsPlayer(url) {
+            videoStorageKey = generateStorageKey(url);
+            
             if (Hls.isSupported()) {
-                // --- HLS.JS MODE ---
                 console.log('HLS.js is supported. Initializing player.');
                 isHlsJsMode = true;
                 showLoader(); 
@@ -1142,7 +1209,6 @@
                     renderTracksMenu(); 
                 });
                 
-                // Listeners to re-render the menu if HLS state changes
                 hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu); 
                 hls.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
 
@@ -1157,14 +1223,17 @@
 
                 hls.attachMedia(video);
                 
+                video.addEventListener('loadedmetadata', () => {
+                    restoreVideoProgress();
+                }, { once: true });
+
                 video.addEventListener('canplay', () => {
                     hideLoader();
                     setupInactivityDetection();
+                    startProgressSaving();
                 }, { once: true });
 
-
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // --- NATIVE HLS MODE (iOS/Safari) ---
                 console.log('Native HLS supported by the browser (likely iOS).');
                 isHlsJsMode = false;
                 showLoader(); 
@@ -1174,6 +1243,8 @@
                     renderTracksMenu(); 
                     hideLoader();
                     setupInactivityDetection();
+                    restoreVideoProgress();
+                    startProgressSaving();
                 }, { once: true });
 
             } else {
@@ -1181,130 +1252,6 @@
                 hideLoader();
             }
         }
-
-        // --- Keyboard Shortcuts ---
-        function handleKeyboardShortcuts(event) {
-            // Ignore if user is typing in an input field
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-                return;
-            }
-
-            // Prevent default browser behavior for specific keys
-            const preventDefaultKeys = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-            if (preventDefaultKeys.includes(event.code)) {
-                event.preventDefault();
-            }
-
-            switch(event.code) {
-                case 'Space': // Play/Pause
-                case 'KeyK':
-                    toggleVideoPlayPause();
-                    break;
-                
-                case 'ArrowLeft': // Rewind 5 seconds
-                    video.currentTime = Math.max(0, video.currentTime - 5);
-                    resetInactivityTimer();
-                    break;
-                
-                case 'ArrowRight': // Forward 5 seconds
-                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
-                    resetInactivityTimer();
-                    break;
-                
-                case 'KeyJ': // Rewind 10 seconds
-                    handleSkipBackward();
-                    break;
-                
-                case 'KeyL': // Forward 10 seconds
-                    handleSkipForward();
-                    break;
-                
-                case 'ArrowUp': // Increase volume
-                    event.preventDefault();
-                    video.volume = Math.min(1, video.volume + 0.05);
-                    video.muted = false;
-                    lastKnownVolume = video.volume;
-                    updateVolumeSlider();
-                    resetInactivityTimer();
-                    break;
-                
-                case 'ArrowDown': // Decrease volume
-                    event.preventDefault();
-                    video.volume = Math.max(0, video.volume - 0.05);
-                    if (video.volume === 0) {
-                        video.muted = true;
-                    }
-                    updateVolumeSlider();
-                    resetInactivityTimer();
-                    break;
-                
-                case 'KeyM': // Toggle mute
-                    toggleMute();
-                    break;
-                
-                case 'KeyF': // Toggle fullscreen
-                    toggleFullscreen();
-                    break;
-                
-                case 'KeyC': // Toggle subtitles
-                    // Toggle between off and first subtitle track
-                    if (isHlsJsMode && hlsInstance) {
-                        const currentSub = hlsInstance.subtitleTrack;
-                        hlsInstance.subtitleTrack = currentSub === -1 ? 0 : -1;
-                    } else if (video.textTracks) {
-                        const textTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-                        const anyShowing = textTracks.some(t => t.mode === 'showing');
-                        textTracks.forEach((track, i) => {
-                            track.mode = anyShowing ? 'disabled' : (i === 0 ? 'showing' : 'disabled');
-                        });
-                    }
-                    renderTracksMenu();
-                    resetInactivityTimer();
-                    break;
-                
-                case 'Digit0': // Jump to 0%
-                case 'Digit1': // Jump to 10%
-                case 'Digit2': // Jump to 20%
-                case 'Digit3': // Jump to 30%
-                case 'Digit4': // Jump to 40%
-                case 'Digit5': // Jump to 50%
-                case 'Digit6': // Jump to 60%
-                case 'Digit7': // Jump to 70%
-                case 'Digit8': // Jump to 80%
-                case 'Digit9': // Jump to 90%
-                    const digit = parseInt(event.code.replace('Digit', ''));
-                    video.currentTime = (video.duration * digit) / 10;
-                    resetInactivityTimer();
-                    break;
-                
-                case 'Home': // Jump to beginning
-                    video.currentTime = 0;
-                    resetInactivityTimer();
-                    break;
-                
-                case 'End': // Jump to end
-                    video.currentTime = video.duration;
-                    resetInactivityTimer();
-                    break;
-                
-                case 'Comma': // Previous frame (when paused)
-                    if (video.paused) {
-                        video.currentTime = Math.max(0, video.currentTime - (1/30)); // ~1 frame at 30fps
-                        resetInactivityTimer();
-                    }
-                    break;
-                
-                case 'Period': // Next frame (when paused)
-                    if (video.paused) {
-                        video.currentTime = Math.min(video.duration, video.currentTime + (1/30)); // ~1 frame at 30fps
-                        resetInactivityTimer();
-                    }
-                    break;
-            }
-        }
-
-        // Add keyboard event listener
-        document.addEventListener('keydown', handleKeyboardShortcuts);
 
         window.onload = () => {
             initHlsPlayer(hlsUrl);
