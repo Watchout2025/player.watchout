@@ -1182,6 +1182,130 @@
             }
         }
 
+        // --- Keyboard Shortcuts ---
+        function handleKeyboardShortcuts(event) {
+            // Ignore if user is typing in an input field
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // Prevent default browser behavior for specific keys
+            const preventDefaultKeys = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            if (preventDefaultKeys.includes(event.code)) {
+                event.preventDefault();
+            }
+
+            switch(event.code) {
+                case 'Space': // Play/Pause
+                case 'KeyK':
+                    toggleVideoPlayPause();
+                    break;
+                
+                case 'ArrowLeft': // Rewind 5 seconds
+                    video.currentTime = Math.max(0, video.currentTime - 5);
+                    resetInactivityTimer();
+                    break;
+                
+                case 'ArrowRight': // Forward 5 seconds
+                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                    resetInactivityTimer();
+                    break;
+                
+                case 'KeyJ': // Rewind 10 seconds
+                    handleSkipBackward();
+                    break;
+                
+                case 'KeyL': // Forward 10 seconds
+                    handleSkipForward();
+                    break;
+                
+                case 'ArrowUp': // Increase volume
+                    event.preventDefault();
+                    video.volume = Math.min(1, video.volume + 0.05);
+                    video.muted = false;
+                    lastKnownVolume = video.volume;
+                    updateVolumeSlider();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'ArrowDown': // Decrease volume
+                    event.preventDefault();
+                    video.volume = Math.max(0, video.volume - 0.05);
+                    if (video.volume === 0) {
+                        video.muted = true;
+                    }
+                    updateVolumeSlider();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'KeyM': // Toggle mute
+                    toggleMute();
+                    break;
+                
+                case 'KeyF': // Toggle fullscreen
+                    toggleFullscreen();
+                    break;
+                
+                case 'KeyC': // Toggle subtitles
+                    // Toggle between off and first subtitle track
+                    if (isHlsJsMode && hlsInstance) {
+                        const currentSub = hlsInstance.subtitleTrack;
+                        hlsInstance.subtitleTrack = currentSub === -1 ? 0 : -1;
+                    } else if (video.textTracks) {
+                        const textTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+                        const anyShowing = textTracks.some(t => t.mode === 'showing');
+                        textTracks.forEach((track, i) => {
+                            track.mode = anyShowing ? 'disabled' : (i === 0 ? 'showing' : 'disabled');
+                        });
+                    }
+                    renderTracksMenu();
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Digit0': // Jump to 0%
+                case 'Digit1': // Jump to 10%
+                case 'Digit2': // Jump to 20%
+                case 'Digit3': // Jump to 30%
+                case 'Digit4': // Jump to 40%
+                case 'Digit5': // Jump to 50%
+                case 'Digit6': // Jump to 60%
+                case 'Digit7': // Jump to 70%
+                case 'Digit8': // Jump to 80%
+                case 'Digit9': // Jump to 90%
+                    const digit = parseInt(event.code.replace('Digit', ''));
+                    video.currentTime = (video.duration * digit) / 10;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Home': // Jump to beginning
+                    video.currentTime = 0;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'End': // Jump to end
+                    video.currentTime = video.duration;
+                    resetInactivityTimer();
+                    break;
+                
+                case 'Comma': // Previous frame (when paused)
+                    if (video.paused) {
+                        video.currentTime = Math.max(0, video.currentTime - (1/30)); // ~1 frame at 30fps
+                        resetInactivityTimer();
+                    }
+                    break;
+                
+                case 'Period': // Next frame (when paused)
+                    if (video.paused) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + (1/30)); // ~1 frame at 30fps
+                        resetInactivityTimer();
+                    }
+                    break;
+            }
+        }
+
+        // Add keyboard event listener
+        document.addEventListener('keydown', handleKeyboardShortcuts);
+
         window.onload = () => {
             initHlsPlayer(hlsUrl);
         };
