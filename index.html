@@ -163,6 +163,9 @@
             transform: rotate(360deg);
         }
     }
+    /* make the preview fade in/out smoothly */
+#thumbnail-preview.show { display: block; opacity: 1; }
+#thumbnail-preview    { opacity: 0; }
     </style>
 </head>
 <body>
@@ -242,6 +245,14 @@
                         
 <div id="seek-thumb" class="absolute top-1/2 -translate-y-1/2  rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100" style="left: 0%;"></div>
                     </div>
+    <!-- THUMBNAIL PREVIEW (add this right after the </div> of #seek-bar) -->
+<div id="thumbnail-preview"
+     class="absolute bottom-16 left-1/2 -translate-x-1/2 w-40 h-24 bg-black/90 rounded-lg overflow-hidden shadow-2xl hidden z-40 pointer-events-none transition-opacity duration-200">
+    <img id="thumbnail-img" class="w-full h-full object-cover" alt="Preview">
+    <div id="thumbnail-time" class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs text-center py-0.5">
+        0:00
+    </div>
+</div>
 
                     
 <div class="flex items-center space-x-1 flex-shrink-0">
@@ -1290,6 +1301,133 @@
                 hideLoader();
             }
         }
+        /* --------------------------------------------------------------
+   THUMBNAIL PREVIEW (VTT sprite or per-segment images)
+   -------------------------------------------------------------- */
+const thumbnailPreview   = document.getElementById('thumbnail-preview');
+const thumbnailImg       = document.getElementById('thumbnail-img');
+const thumbnailTime      = document.getElementById('thumbnail-time');
+
+/* 1. Try to auto-detect a WebVTT sprite file that usually sits next to the master playlist */
+let vttUrl = null;
+function guessVttUrl(masterUrl) {
+    // e.g. master.m3u8  →  master.vtt  or  thumbnails.vtt
+    const base = masterUrl.split('/').slice(0, -1).join('/');
+    return `${base}/thumbnails.vtt`;   // change if your file has another name
+}
+
+/* 2. Load the VTT file and parse the cues */
+let vttCues = [];
+async function loadVtt(url) {
+    try {
+        const resp = await fetch(url, { method: 'HEAD' });
+        if (!resp.ok) return;
+    } catch (_) { return; }
+
+    const text = await (await fetch(url)).text();
+    const lines = text.split('\n');
+    let cue = null;
+    for (const line of lines) {
+        if (line.trim() === '' && cue) { vttCues.push(cue); cue = null; continue; }
+        if (!cue) cue = { start: 0, end: 0, url: '', x: 0, y: 0, w: 0, h: 0 };
+        if (line.includes('-->')) {
+            const [s, e] = line.split('-->').map(t => t.trim());
+            cue.start = parseTime(s); cue.end = parseTime(e);
+        } else if (line.includes('#xywh=')) {
+            const m = line.match(/#xywh=(\d+),(\d+),(\d+),(\d+)/);
+            if (m) { cue.x = +m[1]; cue.y = +m[2]; cue.w = +m[3]; cue.h = +m[4]; }
+        } else if (line.startsWith('http')) {
+            cue.url = line.trim();
+        }
+    }
+    if (cue) vttCues.push(cue);
+}
+function parseTime(str) {
+    const p = str.split(':').map(parseFloat);
+    return p[0]*3600 + p[1]*60 + p[2];
+}
+
+/* 3. Find the cue that covers a given playback second */
+function cueForTime(sec) {
+    return vttCues.find(c => sec >= c.start && sec < c.end) || null;
+}
+
+/* 4. Show / hide preview on mouse/touch move over the bar */
+function showThumbnailAt(clientX) {
+    if (!video.duration) return;
+    const rect = seekBar.getBoundingClientRect();
+    const offsetX = clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, offsetX / rect.width));
+    const time = video.duration * ratio;
+
+    // position the box
+    const boxW = thumbnailPreview.offsetWidth;
+    let left = offsetX - boxW/2;
+    if (left < 0) left = 0;
+    if (left + boxW > rect.width) left = rect.width - boxW;
+    thumbnailPreview.style.left = `${left + rect.left - videoContainer.getBoundingClientRect().left}px`;
+
+    // time label
+    thumbnailTime.textContent = formatTime(time);
+
+    // image
+    const cue = cueForTime(time);
+    if (cue && cue.url) {
+        // sprite sheet → use background-position / clip
+        thumbnailImg.src = cue.url;
+        thumbnailImg.style.objectPosition = `-${cue.x}px -${cue.y}px`;
+        thumbnailImg.style.objectFit = 'none';
+        thumbnailImg.style.width = `${cue.w}px`;
+        thumbnailImg.style.height = `${cue.h}px`;
+        thumbnailImg.style.clipPath = `inset(0 0 0 0)`;
+    } else {
+        // fallback – show nothing (or a static placeholder)
+        thumbnailImg.removeAttribute('src');
+        thumbnailImg.style.objectFit = 'cover';
+    }
+
+    thumbnailPreview.classList.add('show');
+}
+function hideThumbnail() {
+    thumbnailPreview.classList.remove('show');
+}
+
+/* 5. Wire the events */
+let thumbMoveHandler = null;
+seekBar.addEventListener('mouseenter', () => {
+    if (thumbMoveHandler) return;
+    thumbMoveHandler = (e) => {
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        showThumbnailAt(x);
+    };
+    window.addEventListener('mousemove', thumbMoveHandler);
+    window.addEventListener('touchmove', thumbMoveHandler, {passive:true});
+});
+seekBar.addEventListener('mouseleave', () => {
+    hideThumbnail();
+    if (thumbMoveHandler) {
+        window.removeEventListener('mousemove', thumbMoveHandler);
+        window.removeEventListener('touchmove', thumbMoveHandler);
+        thumbMoveHandler = null;
+    }
+});
+seekBar.addEventListener('touchstart', (e) => {
+    showThumbnailAt(e.touches[0].clientX);
+}, {passive:true});
+seekBar.addEventListener('touchend', hideThumbnail);
+
+/* 6. Kick-off – guess VTT URL and load it */
+if (isHlsJsMode) {
+    // HLS.js exposes the resolved URLs after manifest is parsed
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        vttUrl = guessVttUrl(hlsUrl);
+        loadVtt(vttUrl);
+    });
+} else {
+    // native HLS – try immediately
+    vttUrl = guessVttUrl(hlsUrl);
+    loadVtt(vttUrl);
+}
 
         window.onload = () => {
             initHlsPlayer(hlsUrl);
