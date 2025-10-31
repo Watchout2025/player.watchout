@@ -3,151 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Functional HLS Video Player (Updated Loading UX + Playback Speed)</title>
-    
+    <title>HLS Player – Expanded JS + New Speed Icon</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-        html, body {
-            height: 100%;
-            width: 100vw;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #000;
+        html,body{height:100%;width:100vw;margin:0;padding:0;overflow:hidden;font-family:'Inter',sans-serif;background:#000}
+        body{padding-bottom:env(safe-area-inset-bottom)}
+        .bottom-control-button:hover svg{transform:scale(1.2)}
+        #timeline-row{display:flex;width:100%;padding:0 20px;box-sizing:border-box;gap:1rem;align-items:center;position:relative}
+        #bottom-controls-row{display:flex;width:100%;padding:12px;padding-top:4px;gap:8px;box-sizing:border-box;position:relative;margin-top:0}
+        .bottom-control-button{background:transparent;border-radius:.2rem;border:none;color:#fff;cursor:pointer;padding:0;position:relative;transition:transform 150ms;width:3rem;height:3rem;padding:.625rem !important}
+        #mobile-skip-backward-button{margin-right:calc(1.5rem*calc(1-var(--tw-space-x-reverse)))}
+        #mobile-skip-forward-button{margin-left:calc(1.5rem*calc(1-var(--tw-space-x-reverse)))}
+        @media(min-width:768px){
+            #mobile-skip-backward-button{margin-right:calc(2.5rem*calc(1-var(--tw-space-x-reverse)))}
+            #mobile-skip-forward-button{margin-left:calc(2.5rem*calc(1-var(--tw-space-x-reverse)))}
+            .bottom-control-button{width:3rem;height:3rem}
         }
-        body {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .bottom-control-button:hover svg {
-            transform: scale(1.2);
-        }
-
-        #timeline-row {
-            display: flex;
-            width: 100%;
-            padding: 0px 20px;
-            box-sizing: border-box;
-            gap: 1rem;
-            align-items: center;
-            position: relative;
-        }
-
-        #bottom-controls-row {
-            display: flex;
-            width: 100%;
-            padding: 12px;
-            padding-top: 4px;
-            gap: 8px;
-            box-sizing: border-box;
-            position: relative;
-            margin-top: 0px;
-        }
-
-        .bottom-control-button {
-            background-color: transparent;
-            border-radius: 0.2rem;
-            border: none;
-            box-sizing: border-box;
-            color: rgb(255, 255, 255);
-            cursor: pointer;
-            margin: 0px;
-            padding: 0px;
-            position: relative;
-            transition: transform 150ms;
-            will-change: height, width;
-            width: 3rem;
-            height: 3rem;
-            padding: 0.625rem !important;
-        }
-
-        #mobile-skip-backward-button {
-            --tw-space-x-reverse: 0;
-            margin-right: calc(1.5rem * calc(1 - var(--tw-space-x-reverse)));
-        }
-        #mobile-skip-forward-button {
-            --tw-space-x-reverse: 0;
-            margin-left: calc(1.5rem * calc(1 - var(--tw-space-x-reverse)));
-        }
-
-        @media (min-width: 768px) {
-            #mobile-skip-backward-button {
-                --tw-space-x-reverse: 0;
-                margin-right: calc(2.5rem * calc(1 - var(--tw-space-x-reverse)));
-            }
-            #mobile-skip-forward-button {
-                --tw-space-x-reverse: 0;
-                margin-left: calc(2.5rem * calc(1 - var(--tw-space-x-reverse)));
-            }
-            .bottom-control-button {
-                width: 3rem;
-                height: 3rem;
-            }
-        }
-
-        #progress-indicator, #seek-thumb {
-            background-color: #E50914;
-        }
-        #seek-bar {
-            height: 0.25rem;
-        }
-        #seek-thumb {
-            height: 1rem;
-            width: 1rem;
-        }
-
-        #video-container {
-            width: 100vw;
-            height: 100vh;
-            background-color: black;
-        }
-
-        .controls-visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .controls-hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        #seek-bar:hover #seek-thumb {
-            transform: translateY(-50%) scale(1);
-        }
-
-        #volume-slider-track {
-            background: #ffffff33;
-        }
-
-        #audio-tracks-container::-webkit-scrollbar,
-        #subtitle-tracks-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        #audio-tracks-container::-webkit-scrollbar-thumb,
-        #subtitle-tracks-container::-webkit-scrollbar-thumb {
-            background-color: #555;
-            border-radius: 4px;
-        }
-        #audio-tracks-container::-webkit-scrollbar-track,
-        #subtitle-tracks-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #loading-indicator img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        #progress-indicator,#seek-thumb{background:#E50914}
+        #seek-bar{height:.25rem}
+        #seek-thumb{height:1rem;width:1rem}
+        #video-container{width:100vw;height:100vh;background:#000}
+        .controls-visible{opacity:1;pointer-events:auto}
+        .controls-hidden{opacity:0;pointer-events:none}
+        #seek-bar:hover #seek-thumb{transform:translateY(-50%) scale(1)}
+        #volume-slider-track{background:#ffffff33}
+        #audio-tracks-container::-webkit-scrollbar,#subtitle-tracks-container::-webkit-scrollbar{width:8px}
+        #audio-tracks-container::-webkit-scrollbar-thumb,#subtitle-tracks-container::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
+        #audio-tracks-container::-webkit-scrollbar-track,#subtitle-tracks-container::-webkit-scrollbar-track{background:transparent}
+        #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
@@ -155,109 +44,186 @@
 <div id="video-container" class="relative">
     <video id="video" class="w-full h-full object-contain"></video>
 
+    <!-- Loading spinner -->
     <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
-        <img src="https://assets.nflxext.com/en_us/pages/wiplayer/site-spinner.png" class="w-20 h-20 rounded-full shadow-lg" alt="Loading indicator">
+        <img src="https://assets.nflxext.com/en_us/pages/wiplayer/site-spinner.png" class="w-20 h-20 rounded-full shadow-lg" alt="Loading">
     </div>
 
     <div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
 
-    <div id="center-play-pause-overlay" 
-         class="items-center flex-col absolute left-1/2 right-1/2 inset-0 flex items-center justify-center z-10 transition-opacity duration-500 opacity-100 pointer-events-auto">
-        <div id="center-controls-mobile-only" class="justify-center flex items-center">
+    <!-- Center play/pause (mobile) -->
+    <div id="center-play-pause-overlay"
+         class="flex-col absolute left-1/2 right-1/2 inset-0 flex items-center justify-center z-10 transition-opacity duration-500 opacity-100 pointer-events-auto">
+        <div id="center-controls-mobile-only" class="flex justify-center items-center">
             <button id="mobile-skip-backward-button" class="xl:hidden text-white p-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24" data-icon="Back10Medium">
-                    <path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/>
+                <!-- back 10s icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24">
+                    <path fill="currentColor" fill-rule="evenodd"
+                          d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
+                          clip-rule="evenodd"/>
                 </svg>
             </button>
 
-            <button id="center-play-pause-button" class="text-white p-3 md:p-4 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
-                <svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+            <button id="center-play-pause-button"
+                    class="text-white p-3 md:p-4 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
+                <svg id="center-play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                     aria-hidden="true" class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
+                    <path fill="currentColor"
+                          d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
                 </svg>
-                <svg id="center-pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="hidden w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
-                    <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
+                <svg id="center-pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                     aria-hidden="true" class="hidden w-12 h-12 md:w-16 md:h-16" viewBox="0 0 24 24">
+                    <path fill="currentColor" fill-rule="evenodd"
+                          d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z"
+                          clip-rule="evenodd"/>
                 </svg>
             </button>
 
-            <button id="mobile-skip-forward-button" class="xl:hidden text-white p-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none space-x-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24" data-icon="Forward10Medium">
-                    <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
+            <button id="mobile-skip-forward-button"
+                    class="xl:hidden text-white p-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none space-x-6">
+                <!-- forward 10s icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true"
+                     class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24">
+                    <path fill="currentColor" fill-rule="evenodd"
+                          d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z"
+                          clip-rule="evenodd"/>
                 </svg>
             </button>
         </div>
     </div>
 
-    <div id="bottom-overlay" class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
-        <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent flex flex-col space-y-2 md:space-y-3 pointer-events-auto">
+    <!-- Bottom controls -->
+    <div id="bottom-overlay"
+         class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
+        <div id="controls-bar"
+             class="w-full bg-gradient-to-t from-black/70 to-transparent flex flex-col space-y-2 md:space-y-3 pointer-events-auto">
+
+            <!-- Timeline -->
             <div id="timeline-row" class="flex items-center space-x-2 md:space-x-4 w-full">
-                <div id="seek-bar" class="relative flex-grow bg-white/30 rounded-full cursor-pointer group">
-                    <div id="buffer-indicator" class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100" style="width: 0%;"></div>
-                    <div id="progress-indicator" class="absolute inset-y-0 left-0 rounded-full transition-all duration-100" style="width: 0%;"></div>
-                    <div id="seek-thumb" class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100" style="left: 0%;"></div>
+                <div id="seek-bar"
+                     class="relative flex-grow bg-white/30 rounded-full cursor-pointer group">
+                    <div id="buffer-indicator"
+                         class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100"
+                         style="width:0%"></div>
+                    <div id="progress-indicator"
+                         class="absolute inset-y-0 left-0 rounded-full transition-all duration-100"
+                         style="width:0%"></div>
+                    <div id="seek-thumb"
+                         class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100"
+                         style="left:0%"></div>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
-                    <span id="remaining-time" class="text-white text-xs md:text-sm font-medium select-none w-10 md:w-12 text-center">-0:00</span>
+                    <span id="remaining-time"
+                          class="text-white text-xs md:text-sm font-medium select-none w-10 md:w-12 text-center">-0:00</span>
                 </div>
             </div>
 
+            <!-- Bottom button row -->
             <div id="bottom-controls-row" class="flex items-center justify-between">
                 <div class="flex items-center space-x-1 md:space-x-2">
-                    <button id="custom-play-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
-                        <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
+                    <!-- Play / Pause -->
+                    <button id="custom-play-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
+                        <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                             aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                  d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"/>
                         </svg>
-                        <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
-                            <path fill="currentColor" fill-rule="evenodd" d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-
-                    <button id="skip-backward-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="Back10Medium">
-                            <path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-
-                    <button id="skip-forward-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="Forward10Medium">
-                            <path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"/>
+                        <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                             aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M4.5 3a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5zm10 0a.5.5 0 0 0-.5.5v17c0 .28.22.5.5.5h5a.5.5 0 0 0 .5-.5v-17a.5.5 0 0 0-.5-.5z"
+                                  clip-rule="evenodd"/>
                         </svg>
                     </button>
 
+                    <!-- Skip back -->
+                    <button id="skip-backward-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                             aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1  0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+
+                    <!-- Skip forward -->
+                    <button id="skip-forward-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                             aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6zM8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+
+                    <!-- Volume -->
                     <div id="volume-control-wrapper" class="relative flex items-center h-10 md:h-12">
-                        <div id="volume-slider-container" class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
-                            <div id="volume-slider-track" class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
-                                <div id="volume-level" class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full" style="height: 100%;"></div>
-                                <div id="volume-thumb-control" class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100" style="bottom: 0;"></div>
+                        <div id="volume-slider-container"
+                             class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
+                            <div id="volume-slider-track"
+                                 class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
+                                <div id="volume-level"
+                                     class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full"
+                                     style="height:100%"></div>
+                                <div id="volume-thumb-control"
+                                     class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100"
+                                     style="bottom:0"></div>
                             </div>
                         </div>
-                        <button id="mute-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
-                            <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="VolumeMediumMedium">
-                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z" clip-rule="evenodd"/>
+                        <button id="mute-button"
+                                class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
+                            <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                                 aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full"
+                                 viewBox="0 0 24 24">
+                                <path fill="currentColor" fill-rule="evenodd"
+                                      d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm11.37-4.77a10 10 0 0 1 0 14.14l-1.41-1.41a8 8 0 0 0 0-11.32zm-2.83 2.83a6 6 0 0 1 0 8.48l-1.41-1.41a4 4 0 0 0 0-5.66z"
+                                      clip-rule="evenodd"/>
                             </svg>
-                            <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="VolumeOffMedium">
-                                <path fill="currentColor" fill-rule="evenodd" d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z" clip-rule="evenodd"/>
+                            <svg id="volume-off-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                                 aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full"
+                                 viewBox="0 0 24 24">
+                                <path fill="currentColor" fill-rule="evenodd"
+                                      d="M11 4a1 1 0 0 0-1.7-.7L4.58 8H1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h3.59l4.7 4.7A1 1 0 0 0 11 20zM5.7 9.7 9 6.42V17.6l-3.3-3.3-.29-.29H2v-4h3.41zm9.6 0 2.29 2.3-2.3 2.3 1.42 1.4L19 13.42l2.3 2.3 1.4-1.42-2.28-2.3 2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3-1.42-1.4-2.3 2.28-2.3-2.3z"
+                                      clip-rule="evenodd"/>
                             </svg>
                         </button>
                     </div>
                 </div>
 
                 <div class="flex items-center space-x-1 md:space-x-2 relative">
+                    <!-- Audio & Subtitles -->
                     <div class="relative" id="audio-subtitle-wrapper">
-                        <button id="audio-subtitle-toggle" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none" title="Audio & Subtitles">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-6 h-6 md:w-full md:h-full" data-icon="SubtitlesMedium" viewBox="0 0 24 24">
-                                <path fill="currentColor" fill-rule="evenodd" d="M1 3a1 1 0 0 1 1-1h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3a1 1 0 0 1-1.55.83L11.7 18H2a1 1 0 0 1-1-1zm2 1v12h9.3l.25.17L17 19.13V16h4V4zm7 5H5V7h5zm9 2h-5v2h5zm-7 2H5v-2h7zm7-6h-7v2h7z" clip-rule="evenodd"/>
+                        <button id="audio-subtitle-toggle"
+                                class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
+                                title="Audio & Subtitles">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                                 aria-hidden="true" class="w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                                <path fill="currentColor" fill-rule="evenodd"
+                                      d="M1 3a1 1 0 0 1 1-1h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3a1 1 0 0 1-1.55.83L11.7 18H2a1 1 0 0 1-1-1zm2 1v12h9.3l.25.17L17 19.13V16h4V4zm7 5H5V7h5zm9 2h-5v2h5zm-7 2H5v-2h7zm7-6h-7v2h7z"
+                                      clip-rule="evenodd"/>
                             </svg>
                         </button>
-                        <div id="audio-subtitle-menu" class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] rounded-[0.4rem] shadow-2xl p-4 hidden text-white transition-opacity duration-200" style="background-color: rgb(38, 38, 38);">
+                        <div id="audio-subtitle-menu"
+                             class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] rounded-[0.4rem] shadow-2xl p-4 hidden text-white transition-opacity duration-200"
+                             style="background-color:#262626">
                             <div class="flex gap-4">
-                                <div id="audio-tracks-container" class="flex-1 max-h-64 overflow-y-auto pr-2">
-                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Audio Tracks</h4>
+                                <div id="audio-tracks-container"
+                                     class="flex-1 max-h-64 overflow-y-auto pr-2">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
+                                        Audio Tracks
+                                    </h4>
                                     <ul id="audio-list" class="space-y-1 text-sm">
                                         <li class="text-gray-400">Loading tracks...</li>
                                     </ul>
                                 </div>
-                                <div id="subtitle-tracks-container" class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
-                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">Subtitles</h4>
+                                <div id="subtitle-tracks-container"
+                                     class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
+                                        Subtitles
+                                    </h4>
                                     <ul id="subtitle-list" class="space-y-1 text-sm">
                                         <li class="text-gray-400">Loading tracks...</li>
                                     </ul>
@@ -266,22 +232,40 @@
                         </div>
                     </div>
 
-                    <!-- PLAYBACK SPEED BUTTON -->
-                    <button id="speed-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none" title="Playback speed">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-.5-13h1v6l4.5 2.7-.7 1.15-5-3V7z"/>
+                    <!-- PLAYBACK SPEED (new icon) -->
+                    <button id="speed-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
+                            title="Playback speed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                             aria-hidden="true" class="w-6 h-6 md:w-full md:h-full"
+                             viewBox="0 0 24 24" data-icon="InternetSpeedMedium">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M19.06 6.27a9.7 9.7 0 0 0-14.12 0 10.8 10.8 0 0 0 0 14.82L3.5 22.47a12.8 12.8 0 0 1 0-17.59 11.7 11.7 0 0 1 17 0 12.8 12.8 0 0 1 0 17.59l-1.44-1.38a10.8 10.8 0 0 0 0-14.82M15 14a3 3 0 1 1-1.7-2.7l3-3 1.4 1.4-3 3q.3.6.3 1.3"
+                                  clip-rule="evenodd"/>
                         </svg>
                     </button>
-                    <div id="speed-menu" class="absolute bottom-12 right-0 w-48 rounded-[0.4rem] shadow-2xl p-3 hidden text-white transition-opacity duration-200" style="background-color: rgb(38, 38, 38);">
+                    <div id="speed-menu"
+                         class="absolute bottom-12 right-0 w-48 rounded-[0.4rem] shadow-2xl p-3 hidden text-white transition-opacity duration-200"
+                         style="background-color:#262626">
                         <ul id="speed-list" class="space-y-1 text-sm"></ul>
                     </div>
 
-                    <button id="fullscreen-button" class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
-                        <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24" data-icon="FullscreenEnterMedium">
-                            <path fill="currentColor" fill-rule="evenodd" d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z" clip-rule="evenodd"/>
+                    <!-- Fullscreen -->
+                    <button id="fullscreen-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
+                        <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"
+                             fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full"
+                             viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M0 5c0-1.1.9-2 2-2h7v2H2v4H0zm22 0h-7V3h7a2 2 0 0 1 2 2v4h-2zM2 15v4h7v2H2a2 2 0 0 1-2-2v-4zm20 4v-4h2v4a2 2 0 0 1-2 2h-7v-2z"
+                                  clip-rule="evenodd"/>
                         </svg>
-                        <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
-                            <path fill="currentColor" fill-rule="evenodd" d="M24 8h-5V3h-2v7h7zM0 16h5v5h2v-7H0zm7-6H0V8h5V3h2zm12 11v-5h5v-2h-7v7z" clip-rule="evenodd"/>
+                        <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"
+                             fill="none" aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full"
+                             viewBox="0 0 24 24">
+                            <path fill="currentColor" fill-rule="evenodd"
+                                  d="M24 8h-5V3h-2v7h7zM0 16h5v5h2v-7H0zm7-6H0V8h5V3h2zm12 11v-5h5v-2h-7v7z"
+                                  clip-rule="evenodd"/>
                         </svg>
                     </button>
                 </div>
@@ -289,920 +273,746 @@
         </div>
     </div>
 
-    <div id="error-message" class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30"></div>
+    <div id="error-message"
+         class="absolute top-0 left-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30"></div>
 </div>
 
 <script>
-    const video = document.getElementById('video');
-    const videoContainer = document.getElementById('video-container'); 
-    const errorMessageDiv = document.getElementById('error-message');
-    
-    // UI Elements
-    const topOverlay = document.getElementById('top-overlay');
-    const bottomOverlay = document.getElementById('bottom-overlay');
-    const customPlayButton = document.getElementById('custom-play-button'); 
-    const playIcon = document.getElementById('play-icon');
-    const pauseIcon = document.getElementById('pause-icon');
-    const volumeControlWrapper = document.getElementById('volume-control-wrapper'); 
-    const muteButton = document.getElementById('mute-button');
-    const volumeOnIcon = document.getElementById('volume-on-icon');
-    const volumeOffIcon = document.getElementById('volume-off-icon');
-    const volumeSliderContainer = document.getElementById('volume-slider-container');
-    const volumeSliderTrack = document.getElementById('volume-slider-track');
-    const volumeLevel = document.getElementById('volume-level');
-    const volumeThumbControl = document.getElementById('volume-thumb-control');
-    const seekBar = document.getElementById('seek-bar');
-    const bufferIndicator = document.getElementById('buffer-indicator'); 
-    const progressIndicator = document.getElementById('progress-indicator');
-    const seekThumb = document.getElementById('seek-thumb');
-    const remainingTimeDisplay = document.getElementById('remaining-time');
-    const fullscreenButton = document.getElementById('fullscreen-button');
-    const fullscreenEnterIcon = document.getElementById('fullscreen-enter-icon');
-    const fullscreenExitIcon = document.getElementById('fullscreen-exit-icon');
-    const skipBackwardButton = document.getElementById('skip-backward-button');
-    const skipForwardButton = document.getElementById('skip-forward-button');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const audioSubtitleToggle = document.getElementById('audio-subtitle-toggle');
-    const audioSubtitleMenu = document.getElementById('audio-subtitle-menu');
-    const audioList = document.getElementById('audio-list');
-    const subtitleList = document.getElementById('subtitle-list');
-    const centerPlayPauseOverlay = document.getElementById('center-play-pause-overlay');
-    const centerPlayPauseButton = document.getElementById('center-play-pause-button');
-    const centerPlayIcon = document.getElementById('center-play-icon');
-    const centerPauseIcon = document.getElementById('center-pause-icon');
-    const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-button');
-    const mobileSkipForwardButton = document.getElementById('mobile-skip-forward-button');
+/* -------------------------------------------------------------------------
+   DOM ELEMENTS
+   ------------------------------------------------------------------------- */
+const video                = document.getElementById('video');
+const videoContainer       = document.getElementById('video-container');
+const errorMessageDiv      = document.getElementById('error-message');
 
-    // Playback Speed Elements
-    const speedButton = document.getElementById('speed-button');
-    const speedMenu = document.getElementById('speed-menu');
-    const speedList = document.getElementById('speed-list');
+const topOverlay           = document.getElementById('top-overlay');
+const bottomOverlay        = document.getElementById('bottom-overlay');
+const customPlayButton     = document.getElementById('custom-play-button');
+const playIcon             = document.getElementById('play-icon');
+const pauseIcon            = document.getElementById('pause-icon');
 
-    // Speed Options
-    const SPEED_OPTIONS = [
-        {label: '0.25x', value: 0.25},
-        {label: '0.5x',  value: 0.5},
-        {label: '0.75x', value: 0.75},
-        {label: 'Normal',value: 1},
-        {label: '1.25x', value: 1.25},
-        {label: '1.5x',  value: 1.5},
-        {label: '1.75x', value: 1.75},
-        {label: '2x',    value: 2}
-    ];
+const volumeControlWrapper = document.getElementById('volume-control-wrapper');
+const muteButton           = document.getElementById('mute-button');
+const volumeOnIcon         = document.getElementById('volume-on-icon');
+const volumeOffIcon        = document.getElementById('volume-off-icon');
+const volumeSliderContainer= document.getElementById('volume-slider-container');
+const volumeSliderTrack    = document.getElementById('volume-slider-track');
+const volumeLevel          = document.getElementById('volume-level');
+const volumeThumbControl   = document.getElementById('volume-thumb-control');
 
-    // --- DYNAMIC URL LOADING & STATE ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const hlsUrl = urlParams.get('url') || 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8'; 
-    
-    let hlsInstance = null;
-    let isHlsJsMode = false;
-    let inactivityTimer;
-    const INACTIVITY_TIMEOUT = 3000;
-    let isSeeking = false; 
-    let isVolumeAdjusting = false; 
-    let lastKnownVolume = 0.5; 
-    let currentMouseMoveHandler = null; 
-    let currentTouchMoveHandler = null;
-    
-    // --- VIDEO RESUME STATE ---
-    let videoStorageKey = null;
-    let hasRestoredPosition = false;
-    let saveProgressInterval = null;
-    
-    // --- Language Code Mapping ---
-    const languageCodeMap = {
-        'eng': 'English', 'en': 'English', 'und': 'Undefined',
-        'hin': 'Hindi', 'hi': 'Hindi',
-        'tel': 'Telugu', 'te': 'Telugu',
-        'tam': 'Tamil', 'ta': 'Tamil',
-        'kan': 'Kannada', 'kn': 'Kannada',
-        'spa': 'Spanish', 'es': 'Spanish',
-        'fre': 'French', 'fr': 'French',
-        'ger': 'German', 'de': 'German',
-        'ita': 'Italian', 'it': 'Italian',
-        'jpn': 'Japanese', 'ja': 'Japanese',
-        'por': 'Portuguese', 'pt': 'Portuguese',
-        'rus': 'Russian', 'ru': 'Russian',
-        'zho': 'Chinese', 'zh': 'Chinese',
-        'ara': 'Arabic', 'ar': 'Arabic',
-        'kor': 'Korean', 'ko': 'Korean',
-    };
+const seekBar              = document.getElementById('seek-bar');
+const bufferIndicator      = document.getElementById('buffer-indicator');
+const progressIndicator    = document.getElementById('progress-indicator');
+const seekThumb            = document.getElementById('seek-thumb');
+const remainingTimeDisplay = document.getElementById('remaining-time');
 
-    function getFullLanguageName(code) {
-        if (!code) return '';
-        const lowerCode = code.toLowerCase();
-        if (languageCodeMap[lowerCode]) {
-            return languageCodeMap[lowerCode];
-        }
-        return code.charAt(0).toUpperCase() + code.slice(1);
-    }
+const fullscreenButton     = document.getElementById('fullscreen-button');
+const fullscreenEnterIcon  = document.getElementById('fullscreen-enter-icon');
+const fullscreenExitIcon   = document.getElementById('fullscreen-exit-icon');
 
-    function displayError(message) {
-        console.error(message);
-        errorMessageDiv.textContent = message;
-        errorMessageDiv.classList.remove('hidden');
-    }
+const skipBackwardButton   = document.getElementById('skip-backward-button');
+const skipForwardButton    = document.getElementById('skip-forward-button');
 
-    function showLoader() { 
-        loadingIndicator.classList.remove('hidden'); 
-        centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
-        centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
-    }
+const loadingIndicator     = document.getElementById('loading-indicator');
 
-    function hideLoader() { 
-        loadingIndicator.classList.add('hidden'); 
-        resetInactivityTimer();
-    }
+const audioSubtitleToggle  = document.getElementById('audio-subtitle-toggle');
+const audioSubtitleMenu    = document.getElementById('audio-subtitle-menu');
+const audioList            = document.getElementById('audio-list');
+const subtitleList         = document.getElementById('subtitle-list');
 
-    function formatTime(totalSeconds) {
-        if (isNaN(totalSeconds) || totalSeconds < 0) return '0:00';
-        const seconds = Math.floor(totalSeconds % 60);
-        const minutes = Math.floor(totalSeconds / 60) % 60;
-        const hours = Math.floor(totalSeconds / 3600);
-        const paddedSeconds = seconds.toString().padStart(2, '0');
-        const paddedMinutes = minutes.toString().padStart(2, '0');
-        if (hours > 0) {
-            return `${hours}:${paddedMinutes}:${paddedSeconds}`;
-        } else {
-            return `${minutes}:${paddedSeconds}`;
-        }
-    }
+const centerPlayPauseOverlay = document.getElementById('center-play-pause-overlay');
+const centerPlayPauseButton  = document.getElementById('center-play-pause-button');
+const centerPlayIcon        = document.getElementById('center-play-icon');
+const centerPauseIcon       = document.getElementById('center-pause-icon');
 
-    function updateBufferProgress() {
-        if (!video.duration || video.duration === Infinity) return;
-        const buffered = video.buffered;
-        if (buffered.length === 0) {
-            bufferIndicator.style.width = '0%';
-            return;
-        }
-        let furthestBuffered = 0;
-        for (let i = 0; i < buffered.length; i++) {
-            furthestBuffered = Math.max(furthestBuffered, buffered.end(i));
-        }
-        const percent = (furthestBuffered / video.duration) * 100;
-        bufferIndicator.style.width = `${Math.min(100, percent)}%`;
-    }
+const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-button');
+const mobileSkipForwardButton  = document.getElementById('mobile-skip-forward-button');
 
-    function updateProgress() {
-        if (!video.duration || isSeeking) return;
-        const percent = (video.currentTime / video.duration) * 100;
-        progressIndicator.style.width = `${percent}%`;
-        const thumbPosition = `calc(${percent}% - 3px)`; 
-        seekThumb.style.left = thumbPosition;
-        const remainingSeconds = video.duration - video.currentTime;
-        remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
-    }
-    
-    function showControls() {
-        if (!loadingIndicator.classList.contains('hidden')) {
-            bottomOverlay.classList.remove('controls-hidden');
-            bottomOverlay.classList.add('controls-visible');
-            return; 
-        }
+/* -------------------------------------------------------------------------
+   PLAYBACK‑SPEED UI
+   ------------------------------------------------------------------------- */
+const speedButton   = document.getElementById('speed-button');
+const speedMenu     = document.getElementById('speed-menu');
+const speedList     = document.getElementById('speed-list');
+
+const SPEED_OPTIONS = [
+    { label: '0.25x', value: 0.25 },
+    { label: '0.5x',  value: 0.5 },
+    { label: '0.75x', value: 0.75 },
+    { label: 'Normal',value: 1 },
+    { label: '1.25x', value: 1.25 },
+    { label: '1.5x',  value: 1.5 },
+    { label: '1.75x', value: 1.75 },
+    { label: '2x',    value: 2 }
+];
+
+/* -------------------------------------------------------------------------
+   STATE & CONFIG
+   ------------------------------------------------------------------------- */
+const urlParams   = new URLSearchParams(window.location.search);
+const hlsUrl      = urlParams.get('url') || 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
+
+let hlsInstance   = null;
+let isHlsJsMode   = false;
+let inactivityTimer;
+const INACTIVITY_TIMEOUT = 3000;
+
+let isSeeking        = false;
+let isVolumeAdjusting = false;
+let lastKnownVolume   = 0.5;
+
+let currentMouseMoveHandler = null;
+let currentTouchMoveHandler = null;
+
+/* resume‑progress */
+let videoStorageKey   = null;
+let hasRestoredPosition = false;
+let saveProgressInterval = null;
+
+/* language mapping */
+const languageCodeMap = {
+    'eng':'English','en':'English','und':'Undefined',
+    'hin':'Hindi','hi':'Hindi',
+    'tel':'Telugu','te':'Telugu',
+    'tam':'Tamil','ta':'Tamil',
+    'kan':'Kannada','kn':'Kannada',
+    'spa':'Spanish','es':'Spanish',
+    'fre':'French','fr':'French',
+    'ger':'German','de':'German',
+    'ita':'Italian','it':'Italian',
+    'jpn':'Japanese','ja':'Japanese',
+    'por':'Portuguese','pt':'Portuguese',
+    'rus':'Russian','ru':'Russian',
+    'zho':'Chinese','zh':'Chinese',
+    'ara':'Arabic','ar':'Arabic',
+    'kor':'Korean','ko':'Korean'
+};
+function getFullLanguageName(code) {
+    if (!code) return '';
+    const lc = code.toLowerCase();
+    return languageCodeMap[lc] || code.charAt(0).toUpperCase() + code.slice(1);
+}
+
+/* -------------------------------------------------------------------------
+   UI HELPERS
+   ------------------------------------------------------------------------- */
+function displayError(msg) {
+    console.error(msg);
+    errorMessageDiv.textContent = msg;
+    errorMessageDiv.classList.remove('hidden');
+}
+function showLoader() {
+    loadingIndicator.classList.remove('hidden');
+    centerPlayPauseOverlay.classList.remove('opacity-100','pointer-events-auto');
+    centerPlayPauseOverlay.classList.add('opacity-0','pointer-events-none');
+}
+function hideLoader() {
+    loadingIndicator.classList.add('hidden');
+    resetInactivityTimer();
+}
+function formatTime(totalSec) {
+    if (isNaN(totalSec) || totalSec < 0) return '0:00';
+    const sec = Math.floor(totalSec % 60);
+    const min = Math.floor(totalSec / 60) % 60;
+    const hrs = Math.floor(totalSec / 3600);
+    const pad = n => n.toString().padStart(2,'0');
+    return hrs ? `${hrs}:${pad(min)}:${pad(sec)}` : `${min}:${pad(sec)}`;
+}
+function updateBufferProgress() {
+    if (!video.duration || video.duration === Infinity) return;
+    const buffered = video.buffered;
+    if (buffered.length === 0) { bufferIndicator.style.width = '0%'; return; }
+    let furthest = 0;
+    for (let i = 0; i < buffered.length; i++) furthest = Math.max(furthest, buffered.end(i));
+    bufferIndicator.style.width = `${Math.min(100, (furthest / video.duration) * 100)}%`;
+}
+function updateProgress() {
+    if (!video.duration || isSeeking) return;
+    const pct = (video.currentTime / video.duration) * 100;
+    progressIndicator.style.width = `${pct}%`;
+    seekThumb.style.left = `calc(${pct}% - 3px)`;
+    remainingTimeDisplay.textContent = `-${formatTime(video.duration - video.currentTime)}`;
+}
+function showControls() {
+    if (!loadingIndicator.classList.contains('hidden')) {
         bottomOverlay.classList.remove('controls-hidden');
         bottomOverlay.classList.add('controls-visible');
-        centerPlayPauseOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        centerPlayPauseOverlay.classList.add('opacity-100', 'pointer-events-auto');
+        return;
     }
-
-    function hideControls() {
-        if(audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden')) {
-            bottomOverlay.classList.remove('controls-visible');
-            bottomOverlay.classList.add('controls-hidden');
-            centerPlayPauseOverlay.classList.remove('opacity-100', 'pointer-events-auto');
-            centerPlayPauseOverlay.classList.add('opacity-0', 'pointer-events-none');
-        }
+    bottomOverlay.classList.remove('controls-hidden');
+    bottomOverlay.classList.add('controls-visible');
+    centerPlayPauseOverlay.classList.remove('opacity-0','pointer-events-none');
+    centerPlayPauseOverlay.classList.add('opacity-100','pointer-events-auto');
+}
+function hideControls() {
+    if (audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden')) {
+        bottomOverlay.classList.remove('controls-visible');
+        bottomOverlay.classList.add('controls-hidden');
+        centerPlayPauseOverlay.classList.remove('opacity-100','pointer-events-auto');
+        centerPlayPauseOverlay.classList.add('opacity-0','pointer-events-none');
     }
-    
-    function updateBottomPlayPauseIcon(isPaused) {
-        if (isPaused) {
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
+}
+function updateBottomPlayPauseIcon(paused) {
+    if (paused) { playIcon.classList.remove('hidden'); pauseIcon.classList.add('hidden'); }
+    else        { playIcon.classList.add('hidden'); pauseIcon.classList.remove('hidden'); }
+}
+function updateCenterPlayPauseIcon(paused) {
+    centerPlayPauseButton.classList.remove('hidden');
+    if (paused) { centerPlayIcon.classList.remove('hidden'); centerPauseIcon.classList.add('hidden'); }
+    else        { centerPlayIcon.classList.add('hidden'); centerPauseIcon.classList.remove('hidden'); }
+}
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    showControls();
+    if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') &&
+        speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
+        inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
+    }
+}
+function updateMuteIcon() {
+    const muted = video.muted || video.volume === 0;
+    volumeOnIcon.classList.toggle('hidden', muted);
+    volumeOffIcon.classList.toggle('hidden', !muted);
+}
+function updateVolumeSlider() {
+    const vol = video.muted ? 0 : video.volume;
+    volumeLevel.style.height = `${vol * 100}%`;
+    volumeThumbControl.style.bottom = `calc(${vol * 100}% - 8px)`;
+    updateMuteIcon();
+}
+function toggleMute() {
+    if (video.muted) {
+        video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
+        video.muted = false;
+    } else {
+        lastKnownVolume = video.volume;
+        video.muted = true;
+    }
+    updateVolumeSlider();
+    resetInactivityTimer();
+}
+function toggleVideoPlayPause() {
+    if (audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
+        if (video.paused || video.ended) {
+            video.play().catch(e => displayError('Play failed: ' + e.message));
         } else {
-            playIcon.classList.add('hidden');
-            pauseIcon.classList.remove('hidden');
+            video.pause();
         }
     }
+}
 
-    function updateCenterPlayPauseIcon(isPaused) {
-        centerPlayPauseButton.classList.remove('hidden'); 
-        if (isPaused) {
-            centerPlayIcon.classList.remove('hidden');
-            centerPauseIcon.classList.add('hidden');
-        } else {
-            centerPlayIcon.classList.add('hidden');
-            centerPauseIcon.classList.remove('hidden');
-        }
+/* -------------------------------------------------------------------------
+   SEEKING
+   ------------------------------------------------------------------------- */
+function calculateNewTime(clientX) {
+    const rect = seekBar.getBoundingClientRect();
+    let pos = clientX - rect.left;
+    pos = Math.max(0, Math.min(pos, rect.width));
+    return video.duration * (pos / rect.width);
+}
+function handleSeek(clientX) {
+    if (!video.duration || video.duration === Infinity) return;
+    const newTime = calculateNewTime(clientX);
+    const pct = (newTime / video.duration) * 100;
+    progressIndicator.style.width = `${pct}%`;
+    seekThumb.style.left = `calc(${pct}% - 3px)`;
+    remainingTimeDisplay.textContent = `-${formatTime(video.duration - newTime)}`;
+}
+function startSeeking(e) {
+    if (!video.duration || video.duration === Infinity) return;
+    isSeeking = true;
+    showControls();
+    seekThumb.classList.add('scale-100');
+
+    currentMouseMoveHandler = ev => handleSeek(ev.clientX);
+    currentTouchMoveHandler = ev => handleSeek(ev.touches[0].clientX);
+
+    window.addEventListener('mousemove', currentMouseMoveHandler);
+    window.addEventListener('mouseup', endSeeking);
+    window.addEventListener('touchmove', currentTouchMoveHandler, {passive:true});
+    window.addEventListener('touchend', endSeeking);
+
+    handleSeek(e.touches ? e.touches[0].clientX : e.clientX);
+}
+function endSeeking(e) {
+    if (!isSeeking) return;
+    const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    video.currentTime = calculateNewTime(x);
+    isSeeking = false;
+    seekThumb.classList.remove('scale-100');
+    if (currentMouseMoveHandler) {
+        window.removeEventListener('mousemove', currentMouseMoveHandler);
+        currentMouseMoveHandler = null;
     }
+    window.removeEventListener('mouseup', endSeeking);
+    window.removeEventListener('touchend', endSeeking);
+    resetInactivityTimer();
+}
 
-    function resetInactivityTimer() {
+/* -------------------------------------------------------------------------
+   FULLSCREEN
+   ------------------------------------------------------------------------- */
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        videoContainer.requestFullscreen({navigationUI:'hide'})
+            .catch(err => displayError('Fullscreen error: ' + err.message));
+    }
+}
+function updateFullscreenIcon() {
+    const inFs = !!document.fullscreenElement;
+    fullscreenEnterIcon.classList.toggle('hidden', inFs);
+    fullscreenExitIcon.classList.toggle('hidden', !inFs);
+}
+
+/* -------------------------------------------------------------------------
+   SKIP BUTTONS
+   ------------------------------------------------------------------------- */
+function handleSkipBackward() { video.currentTime = Math.max(0, video.currentTime - 10); resetInactivityTimer(); }
+function handleSkipForward()  { video.currentTime = Math.min(video.duration, video.currentTime + 10); resetInactivityTimer(); }
+
+/* -------------------------------------------------------------------------
+   AUDIO / SUBTITLE MENU
+   ------------------------------------------------------------------------- */
+function toggleAudioSubtitleMenu() {
+    const hidden = audioSubtitleMenu.classList.contains('hidden');
+    if (hidden) {
+        renderTracksMenu();
+        audioSubtitleMenu.classList.remove('hidden');
         clearTimeout(inactivityTimer);
         showControls();
-        if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
-            inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
-        }
-    }
-    
-    function updateMuteIcon() {
-        if (video.muted || video.volume === 0) {
-            volumeOnIcon.classList.add('hidden');
-            volumeOffIcon.classList.remove('hidden');
-        } else {
-            volumeOnIcon.classList.remove('hidden');
-            volumeOffIcon.classList.add('hidden');
-        }
-    }
-
-    function updateVolumeSlider() {
-        const volume = video.muted ? 0 : video.volume; 
-        const percent = volume * 100; 
-        volumeLevel.style.height = `${percent}%`;
-        volumeThumbControl.style.bottom = `calc(${percent}% - 8px)`;
-        updateMuteIcon();
-    }
-
-    function toggleMute() {
-        if (video.muted) {
-            video.volume = lastKnownVolume > 0 ? lastKnownVolume : 0.5;
-            video.muted = false;
-        } else {
-            lastKnownVolume = video.volume;
-            video.muted = true;
-        }
-        updateVolumeSlider();
-        resetInactivityTimer();
-    }
-    
-    function toggleVideoPlayPause() {
-        if (audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) { 
-            if (video.paused || video.ended) {
-                video.play().catch(e => {
-                    displayError("Play failed. User interaction may be required. Error: " + e.message);
-                });
-            } else {
-                video.pause();
-            }
-        }
-    }
-    
-    function calculateNewTime(clientX) {
-        const rect = seekBar.getBoundingClientRect();
-        let clickPosition = clientX - rect.left;
-        if (clickPosition < 0) clickPosition = 0;
-        if (clickPosition > rect.width) clickPosition = rect.width;
-        const seekRatio = clickPosition / rect.width;
-        return video.duration * seekRatio;
-    }
-
-    function handleSeek(clientX) {
-        if (!video.duration || video.duration === Infinity) return;
-        const newTime = calculateNewTime(clientX);
-        const percent = (newTime / video.duration) * 100;
-        progressIndicator.style.width = `${percent}%`;
-        seekThumb.style.left = `calc(${percent}% - 3px)`; 
-        const remainingSeconds = video.duration - newTime;
-        remainingTimeDisplay.textContent = `-${formatTime(remainingSeconds)}`;
-    }
-
-    function startSeeking(event) {
-        if (!video.duration || video.duration === Infinity) return;
-        isSeeking = true;
-        showControls(); 
-        seekThumb.classList.add('scale-100');
-        currentMouseMoveHandler = (e) => handleSeek(e.clientX);
-        currentTouchMoveHandler = (e) => handleSeek(e.touches[0].clientX);
-        window.addEventListener('mousemove', currentMouseMoveHandler);
-        window.addEventListener('mouseup', endSeeking);
-        window.addEventListener('touchmove', currentTouchMoveHandler, { passive: true });
-        window.addEventListener('touchend', endSeeking);
-        handleSeek(event.touches ? event.touches[0].clientX : event.clientX);
-    }
-
-    function endSeeking(event) {
-        if (!isSeeking) return;
-        const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
-        video.currentTime = calculateNewTime(clientX);
-        isSeeking = false;
-        seekThumb.classList.remove('scale-100');
-        if (currentMouseMoveHandler) {
-            window.removeEventListener('mousemove', currentMouseMoveHandler);
-            currentMouseMoveHandler = null;
-        }
-        window.removeEventListener('mouseup', endSeeking);
-        window.removeEventListener('touchend', endSeeking);
-        resetInactivityTimer();
-    }
-
-    function toggleFullscreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            videoContainer.requestFullscreen({navigationUI: "hide"}).catch(err => {
-                displayError(`Error enabling full-screen: ${err.message}`);
-            });
-        }
-    }
-
-    function updateFullscreenIcon() {
-        const isFullscreen = !!document.fullscreenElement;
-        if (isFullscreen) {
-            fullscreenEnterIcon.classList.add('hidden');
-            fullscreenExitIcon.classList.remove('hidden');
-        } else {
-            fullscreenEnterIcon.classList.remove('hidden');
-            fullscreenExitIcon.classList.add('hidden');
-        }
-    }
-
-    function handleSkipBackward() {
-        video.currentTime = Math.max(0, video.currentTime - 10);
-        resetInactivityTimer(); 
-    }
-
-    function handleSkipForward() {
-        video.currentTime = Math.min(video.duration, video.currentTime + 10);
-        resetInactivityTimer();
-    }
-
-    function toggleAudioSubtitleMenu() {
-        const isCurrentlyHidden = audioSubtitleMenu.classList.contains('hidden');
-        if (isCurrentlyHidden) {
-            renderTracksMenu(); 
-            audioSubtitleMenu.classList.remove('hidden');
-            clearTimeout(inactivityTimer); 
-            showControls(); 
-        } else {
-            audioSubtitleMenu.classList.add('hidden');
-            resetInactivityTimer(); 
-        }
-    }
-    
-    function handleDocumentClick(event) {
-        if (!audioSubtitleMenu.classList.contains('hidden')) {
-            const isClickInsideMenu = audioSubtitleMenu.contains(event.target);
-            const isClickOnToggle = audioSubtitleToggle.contains(event.target);
-            if (!isClickInsideMenu && !isClickOnToggle) {
-                audioSubtitleMenu.classList.add('hidden');
-                resetInactivityTimer(); 
-            }
-        }
-        if (!speedMenu.classList.contains('hidden')) {
-            const insideMenu = speedMenu.contains(event.target);
-            const onToggle = speedButton.contains(event.target);
-            if (!insideMenu && !onToggle) {
-                speedMenu.classList.add('hidden');
-                resetInactivityTimer();
-            }
-        }
-    }
-
-    function renderTracksMenu() {
-        audioList.innerHTML = '';
-        subtitleList.innerHTML = '';
-        
-        const getDisplayName = (track, isHls) => {
-            const rawLangCode = isHls ? track.lang : track.language;
-            const primaryLabel = isHls ? track.name : track.label;
-            let trackName = '';
-            if (rawLangCode) {
-                trackName = getFullLanguageName(rawLangCode);
-            }
-            if (primaryLabel) {
-                const lowerLabel = primaryLabel.toLowerCase();
-                if (languageCodeMap[lowerLabel]) {
-                    trackName = languageCodeMap[lowerLabel];
-                } else if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === rawLangCode.toLowerCase()) {
-                    trackName = primaryLabel;
-                }
-            }
-            if (trackName === '' || trackName.toLowerCase() === 'undefined' || trackName.toLowerCase() === 'und') {
-                return `Track ${track.id || track.groupId}`;
-            }
-            return trackName;
-        };
-
-        let tracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
-        let currentIndex = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t => t.enabled) : -1);
-
-        if (tracks.length === 0) {
-             audioList.innerHTML = '<li class="text-gray-400">No alternate audio tracks found.</li>';
-        }
-
-        tracks.forEach((track, index) => {
-            const isSelected = isHlsJsMode ? (index === currentIndex) : (track.enabled);
-            const trackName = getDisplayName(track, isHlsJsMode);
-            const li = document.createElement('li');
-            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-            li.textContent = trackName;
-            li.setAttribute('data-index', index);
-            li.setAttribute('data-type', 'audio');
-            li.addEventListener('click', () => handleTrackSelection('audio', index));
-            audioList.appendChild(li);
-        });
-        
-        let subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions') : []);
-        let currentSubIndex = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t => t.mode === 'showing');
-
-        const isOffSelected = (currentSubIndex === -1);
-        const offLi = document.createElement('li');
-        offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isOffSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-        offLi.textContent = 'Off';
-        offLi.setAttribute('data-index', -1); 
-        offLi.setAttribute('data-type', 'subtitle');
-        offLi.addEventListener('click', () => handleTrackSelection('subtitle', -1));
-        subtitleList.appendChild(offLi);
-        
-        if (subTracks.length === 0 && !isOffSelected) {
-             subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
-        }
-
-        subTracks.forEach((track, index) => {
-            const isSelected = isHlsJsMode ? (index === currentSubIndex) : (track.mode === 'showing');
-            const trackName = getDisplayName(track, isHlsJsMode);
-            const li = document.createElement('li');
-            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${isSelected ? 'font-bold text-white' : 'text-gray-400'}`;
-            li.textContent = trackName;
-            li.setAttribute('data-index', index);
-            li.setAttribute('data-type', 'subtitle');
-            li.addEventListener('click', () => handleTrackSelection('subtitle', index));
-            subtitleList.appendChild(li);
-            if (!isHlsJsMode) {
-                track.onchange = renderTracksMenu;
-            }
-        });
-    }
-
-    function handleTrackSelection(type, index) {
-        if (type === 'audio') {
-            if (isHlsJsMode && hlsInstance) {
-                hlsInstance.audioTrack = index;
-            } else if (video.audioTracks) {
-                const nativeAudioTracks = video.audioTracks;
-                for (let i = 0; i < nativeAudioTracks.length; i++) {
-                    nativeAudioTracks[i].enabled = (i === index); 
-                }
-            }
-        } else if (type === 'subtitle') {
-            if (isHlsJsMode && hlsInstance) {
-                hlsInstance.subtitleTrack = index;
-            } else if (video.textTracks) {
-                const nativeTextTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-                nativeTextTracks.forEach((track, i) => {
-                    if (index === -1) {
-                         track.mode = 'disabled';
-                    } else if (i === index) {
-                         track.mode = 'showing';
-                    } else {
-                         track.mode = 'disabled';
-                    }
-                });
-            }
-        }
+    } else {
         audioSubtitleMenu.classList.add('hidden');
-        renderTracksMenu(); 
         resetInactivityTimer();
     }
-
-    // === PLAYBACK SPEED CONTROL ===
-    function renderSpeedMenu() {
-        speedList.innerHTML = '';
-        SPEED_OPTIONS.forEach(opt => {
-            const li = document.createElement('li');
-            li.className = `cursor-pointer hover:opacity-80 p-1 rounded transition text-sm ${video.playbackRate === opt.value ? 'font-bold text-white' : 'text-gray-400'}`;
-            li.textContent = opt.label;
-            li.dataset.speed = opt.value;
-            li.addEventListener('click', () => setPlaybackSpeed(opt.value));
-            speedList.appendChild(li);
-        });
+}
+function handleDocumentClick(e) {
+    // close audio/subtitle menu if click outside
+    if (!audioSubtitleMenu.classList.contains('hidden') &&
+        !audioSubtitleMenu.contains(e.target) &&
+        !audioSubtitleToggle.contains(e.target)) {
+        audioSubtitleMenu.classList.add('hidden');
+        resetInactivityTimer();
     }
-
-    function setPlaybackSpeed(rate) {
-        video.playbackRate = rate;
-        renderSpeedMenu();
+    // close speed menu if click outside
+    if (!speedMenu.classList.contains('hidden') &&
+        !speedMenu.contains(e.target) &&
+        !speedButton.contains(e.target)) {
         speedMenu.classList.add('hidden');
         resetInactivityTimer();
     }
+}
+function renderTracksMenu() {
+    audioList.innerHTML = '';
+    subtitleList.innerHTML = '';
 
-    function toggleSpeedMenu() {
-        const hidden = speedMenu.classList.contains('hidden');
-        if (hidden) {
-            renderSpeedMenu();
-            speedMenu.classList.remove('hidden');
-            clearTimeout(inactivityTimer);
-            showControls();
-        } else {
-            speedMenu.classList.add('hidden');
-            resetInactivityTimer();
+    const getDisplayName = (track, isHls) => {
+        const raw = isHls ? track.lang : track.language;
+        const primary = isHls ? track.name : track.label;
+        let name = raw ? getFullLanguageName(raw) : '';
+        if (primary) {
+            const l = primary.toLowerCase();
+            if (languageCodeMap[l]) name = languageCodeMap[l];
+            else if (!name || name.toLowerCase() === 'undefined' || name.toLowerCase() === raw?.toLowerCase())
+                name = primary;
+        }
+        return name || `Track ${track.id ?? track.groupId ?? ''}`;
+    };
+
+    /* ---- AUDIO ---- */
+    const audioTracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
+    const curAudioIdx = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t=>t.enabled) : -1);
+
+    if (!audioTracks.length) {
+        audioList.innerHTML = '<li class="text-gray-400">No alternate audio tracks found.</li>';
+    } else {
+        audioTracks.forEach((track, i) => {
+            const selected = isHlsJsMode ? (i === curAudioIdx) : track.enabled;
+            const li = document.createElement('li');
+            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
+            li.textContent = getDisplayName(track, isHlsJsMode);
+            li.dataset.index = i;
+            li.dataset.type  = 'audio';
+            li.addEventListener('click', () => handleTrackSelection('audio', i));
+            audioList.appendChild(li);
+        });
+    }
+
+    /* ---- SUBTITLES ---- */
+    const subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : []);
+    const curSubIdx = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t=>t.mode==='showing');
+
+    // OFF entry
+    const offLi = document.createElement('li');
+    offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx===-1?'font-bold text-white':'text-gray-400'}`;
+    offLi.textContent = 'Off';
+    offLi.dataset.index = -1;
+    offLi.dataset.type  = 'subtitle';
+    offLi.addEventListener('click', () => handleTrackSelection('subtitle', -1));
+    subtitleList.appendChild(offLi);
+
+    if (!subTracks.length && curSubIdx === -1) {
+        subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
+    } else {
+        subTracks.forEach((track, i) => {
+            const selected = isHlsJsMode ? (i === curSubIdx) : (track.mode === 'showing');
+            const li = document.createElement('li');
+            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
+            li.textContent = getDisplayName(track, isHlsJsMode);
+            li.dataset.index = i;
+            li.dataset.type  = 'subtitle';
+            li.addEventListener('click', () => handleTrackSelection('subtitle', i));
+            subtitleList.appendChild(li);
+
+            if (!isHlsJsMode) track.onchange = renderTracksMenu;
+        });
+    }
+}
+function handleTrackSelection(type, idx) {
+    if (type === 'audio') {
+        if (isHlsJsMode && hlsInstance) hlsInstance.audioTrack = idx;
+        else if (video.audioTracks) {
+            for (let i=0;i<video.audioTracks.length;i++) video.audioTracks[i].enabled = (i===idx);
+        }
+    } else if (type === 'subtitle') {
+        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = idx;
+        else if (video.textTracks) {
+            const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
+            subs.forEach((t,i) => {
+                if (idx === -1) t.mode = 'disabled';
+                else if (i === idx) t.mode = 'showing';
+                else t.mode = 'disabled';
+            });
         }
     }
+    audioSubtitleMenu.classList.add('hidden');
+    renderTracksMenu();
+    resetInactivityTimer();
+}
 
-    function handleSpeedKeyboard(e) {
-        if (e.key === ',' || e.key === '<') {
-            e.preventDefault();
-            const idx = SPEED_OPTIONS.findIndex(o => o.value === video.playbackRate);
-            if (idx > 0) setPlaybackSpeed(SPEED_OPTIONS[idx - 1].value);
-        } else if (e.key === '.' || e.key === '>') {
-            e.preventDefault();
-            const idx = SPEED_OPTIONS.findIndex(o => o.value === video.playbackRate);
-            if (idx < SPEED_OPTIONS.length - 1) setPlaybackSpeed(SPEED_OPTIONS[idx + 1].value);
-        }
-    }
-
-    speedButton.addEventListener('click', e => { e.stopPropagation(); toggleSpeedMenu(); });
-    document.addEventListener('click', handleDocumentClick);
-    document.addEventListener('keydown', handleSpeedKeyboard);
-
-    // === VIDEO RESUME FUNCTIONS ===
-    function generateStorageKey(url) {
-        return `video_progress:${url}`;
-    }
-
-    function saveVideoProgress() {
-        if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
-        if (video.currentTime < 1 || video.currentTime > video.duration - 5) return;
-        
-        try {
-            const progressData = {
-                currentTime: video.currentTime,
-                duration: video.duration,
-                timestamp: Date.now(),
-                url: hlsUrl
-            };
-            localStorage.setItem(videoStorageKey, JSON.stringify(progressData));
-        } catch (error) {
-            console.error('Failed to save video progress:', error);
-        }
-    }
-
-    function restoreVideoProgress() {
-        if (hasRestoredPosition) return;
-        if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
-        
-        try {
-            const stored = localStorage.getItem(videoStorageKey);
-            if (stored) {
-                const progressData = JSON.parse(stored);
-                if (progressData.url === hlsUrl && progressData.currentTime > 1 && progressData.currentTime < video.duration - 5) {
-                    hasRestoredPosition = true;
-                    const seekWhenReady = () => {
-                        if (video.readyState >= 2) {
-                            video.currentTime = progressData.currentTime;
-                            showResumeNotification(progressData.currentTime);
-                        } else {
-                            video.currentTime = progressData.currentTime;
-                            showResumeNotification(progressData.currentTime);
-                        }
-                    };
-                    if (video.readyState >= 2) {
-                        seekWhenReady();
-                    } else {
-                        video.addEventListener('canplay', seekWhenReady, { once: true });
-                    }
-                }
-            }
-        } catch (error) {
-            hasRestoredPosition = true;
-        }
-    }
-
-    function showResumeNotification(time) {
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-4 py-2 rounded-lg text-sm z-50 transition-opacity duration-300';
-        notification.textContent = `Resumed from ${formatTime(time)}`;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
-        }, 2000);
-    }
-
-    function clearVideoProgress() {
-        try {
-            localStorage.removeItem(videoStorageKey);
-        } catch (error) {
-            console.error('Failed to clear video progress:', error);
-        }
-    }
-
-    function startProgressSaving() {
-        saveProgressInterval = setInterval(saveVideoProgress, 5000);
-        video.addEventListener('pause', saveVideoProgress);
-        video.addEventListener('seeking', saveVideoProgress);
-        video.addEventListener('ended', clearVideoProgress);
-        window.addEventListener('beforeunload', saveVideoProgress);
-    }
-
-    function postTimeUpdateToParent() {
-        if (window.parent !== window) {
-            const timeData = {
-                event: 'videoTimeUpdate',
-                currentTime: video.currentTime,
-                duration: video.duration,
-                paused: video.paused
-            };
-            window.parent.postMessage(timeData, '*'); 
-        }
-    }
-
-    function setupInactivityDetection() {
-        const container = document.getElementById('video-container');
-        ['mousemove', 'mousedown', 'touchstart'].forEach(event => {
-            container.addEventListener(event, resetInactivityTimer);
-        });
-
-        topOverlay.addEventListener('click', () => {
-            const isMobile = window.innerWidth <= 1000;
-            if (isMobile) {
-                const elements = [
-                    document.getElementById("center-controls-mobile-only"),
-                    document.getElementById("controls-bar")
-                ];
-                const anyHidden = elements.some(el => el.style.display === "none");
-                if (anyHidden) {
-                    elements.forEach(el => el.style.display = "flex");
-                } else {
-                    elements.forEach(el => el.style.display = "none");
-                }
-            } else {
-                toggleVideoPlayPause();
-            }
-        });
-
-        customPlayButton.addEventListener('click', toggleVideoPlayPause);
-        centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
-        fullscreenButton.addEventListener('click', toggleFullscreen); 
-        skipBackwardButton.addEventListener('click', handleSkipBackward);
-        skipForwardButton.addEventListener('click', handleSkipForward);
-        mobileSkipBackwardButton.addEventListener('click', handleSkipBackward);
-        mobileSkipForwardButton.addEventListener('click', handleSkipForward);
-        muteButton.addEventListener('click', toggleMute); 
-        audioSubtitleToggle.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            toggleAudioSubtitleMenu();
-        });
-        seekBar.addEventListener('mousedown', startSeeking);
-        seekBar.addEventListener('touchstart', (e) => startSeeking(e), { passive: true }); 
-        volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
-        volumeControlWrapper.addEventListener('mouseleave', () => {
-             setTimeout(() => { if (!isVolumeAdjusting) { volumeSliderContainer.classList.add('hidden'); } }, 300);
-        });
-        document.addEventListener('fullscreenchange', updateFullscreenIcon);
-
-        video.addEventListener('timeupdate', () => {
-            updateProgress();
-            postTimeUpdateToParent(); 
-        });
-        video.addEventListener('progress', updateBufferProgress);
-        video.addEventListener('loadedmetadata', () => {
-            updateProgress();
-            updateBufferProgress();
-            remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
-        });
-        video.addEventListener('volumechange', updateVolumeSlider);
-        video.addEventListener('waiting', showLoader);
-        video.addEventListener('playing', hideLoader);
-        video.addEventListener('canplay', hideLoader);
-        video.addEventListener('pause', () => {
-            showControls();
-            updateBottomPlayPauseIcon(true);
-            updateCenterPlayPauseIcon(true); 
-            clearTimeout(inactivityTimer); 
-        });
-        video.addEventListener('play', () => {
-            updateBottomPlayPauseIcon(false);
-            updateCenterPlayPauseIcon(false); 
-            resetInactivityTimer();
-        });
-        video.addEventListener('ended', () => {
-            showControls();
-            updateBottomPlayPauseIcon(true);
-            updateCenterPlayPauseIcon(true); 
-            hideLoader(); 
-        });
-        
-        if (!isHlsJsMode && video.audioTracks) {
-            video.audioTracks.addEventListener('change', renderTracksMenu);
-        }
-
-        lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
-        updateProgress();
-        updateBufferProgress(); 
-        updateVolumeSlider(); 
-        updateFullscreenIcon(); 
-        
-        if (video.paused || video.ended) { 
-            showControls();
-            updateBottomPlayPauseIcon(true);
-            updateCenterPlayPauseIcon(true); 
-        } else {
-            updateBottomPlayPauseIcon(false);
-            updateCenterPlayPauseIcon(false); 
-            resetInactivityTimer();
-        }
-    }
-    
-    function calculateNewVolume(clientY) {
-        const rect = volumeSliderTrack.getBoundingClientRect();
-        let distance = rect.bottom - clientY;
-        if (distance < 0) distance = 0;
-        if (distance > rect.height) distance = rect.height;
-        const volumeRatio = distance / rect.height;
-        return Math.max(0, Math.min(1, volumeRatio)); 
-    }
-
-    function handleVolumeAdjust(event) {
-        event.preventDefault(); 
-        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
-        const newVolume = calculateNewVolume(clientY);
-        video.volume = newVolume;
-        if (newVolume > 0) {
-            video.muted = false;
-            lastKnownVolume = newVolume;
-        } else {
-            video.muted = true;
-        }
-        updateVolumeSlider(); 
-    }
-
-    function startVolumeAdjusting(event) {
-        isVolumeAdjusting = true;
-        event.preventDefault(); 
-        window.addEventListener('mousemove', handleVolumeAdjust);
-        window.addEventListener('mouseup', endVolumeAdjusting);
-        window.addEventListener('touchmove', handleVolumeAdjust);
-        window.addEventListener('touchend', endVolumeAdjusting);
-        handleVolumeAdjust(event);
-    }
-
-    function endVolumeAdjusting() {
-        if (!isVolumeAdjusting) return;
-        isVolumeAdjusting = false;
-        window.removeEventListener('mousemove', handleVolumeAdjust);
-        window.removeEventListener('mouseup', endVolumeAdjusting);
-        window.removeEventListener('touchmove', handleVolumeAdjust);
-        window.removeEventListener('touchend', endVolumeAdjusting);
+/* -------------------------------------------------------------------------
+   PLAYBACK‑SPEED LOGIC
+   ------------------------------------------------------------------------- */
+function renderSpeedMenu() {
+    speedList.innerHTML = '';
+    SPEED_OPTIONS.forEach(opt => {
+        const li = document.createElement('li');
+        li.className = `cursor-pointer hover:opacity-80 p-1 rounded transition text-sm ${video.playbackRate===opt.value?'font-bold text-white':'text-gray-400'}`;
+        li.textContent = opt.label;
+        li.dataset.speed = opt.value;
+        li.addEventListener('click', () => setPlaybackSpeed(opt.value));
+        speedList.appendChild(li);
+    });
+}
+function setPlaybackSpeed(rate) {
+    video.playbackRate = rate;
+    renderSpeedMenu();
+    speedMenu.classList.add('hidden');
+    resetInactivityTimer();
+}
+function toggleSpeedMenu() {
+    const hidden = speedMenu.classList.contains('hidden');
+    if (hidden) {
+        renderSpeedMenu();
+        speedMenu.classList.remove('hidden');
+        clearTimeout(inactivityTimer);
+        showControls();
+    } else {
+        speedMenu.classList.add('hidden');
         resetInactivityTimer();
     }
-    
-    volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
-    volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, { passive: true });
-
-    function handleKeyboardShortcuts(event) {
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
-
-        const preventDefaultKeys = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-        if (preventDefaultKeys.includes(event.code)) event.preventDefault();
-
-        switch(event.code) {
-            case 'Space':
-            case 'KeyK':
-                toggleVideoPlayPause();
-                break;
-            case 'ArrowLeft':
-                video.currentTime = Math.max(0, video.currentTime - 5);
-                resetInactivityTimer();
-                break;
-            case 'ArrowRight':
-                video.currentTime = Math.min(video.duration, video.currentTime + 5);
-                resetInactivityTimer();
-                break;
-            case 'KeyJ':
-                handleSkipBackward();
-                break;
-            case 'KeyL':
-                handleSkipForward();
-                break;
-            case 'ArrowUp':
-                event.preventDefault();
-                video.volume = Math.min(1, video.volume + 0.05);
-                video.muted = false;
-                lastKnownVolume = video.volume;
-                updateVolumeSlider();
-                resetInactivityTimer();
-                break;
-            case 'ArrowDown':
-                event.preventDefault();
-                video.volume = Math.max(0, video.volume - 0.05);
-                if (video.volume === 0) video.muted = true;
-                updateVolumeSlider();
-                resetInactivityTimer();
-                break;
-            case 'KeyM':
-                toggleMute();
-                break;
-            case 'KeyF':
-                toggleFullscreen();
-                break;
-            case 'KeyC':
-                if (isHlsJsMode && hlsInstance) {
-                    const currentSub = hlsInstance.subtitleTrack;
-                    hlsInstance.subtitleTrack = currentSub === -1 ? 0 : -1;
-                } else if (video.textTracks) {
-                    const textTracks = Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-                    const anyShowing = textTracks.some(t => t.mode === 'showing');
-                    textTracks.forEach((track, i) => {
-                        track.mode = anyShowing ? 'disabled' : (i === 0 ? 'showing' : 'disabled');
-                    });
-                }
-                renderTracksMenu();
-                resetInactivityTimer();
-                break;
-            case 'Digit0': case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4':
-            case 'Digit5': case 'Digit6': case 'Digit7': case 'Digit8': case 'Digit9':
-                const digit = parseInt(event.code.replace('Digit', ''));
-                video.currentTime = (video.duration * digit) / 10;
-                resetInactivityTimer();
-                break;
-            case 'Home':
-                video.currentTime = 0;
-                resetInactivityTimer();
-                break;
-            case 'End':
-                video.currentTime = video.duration;
-                resetInactivityTimer();
-                break;
-            case 'Comma':
-                if (video.paused) {
-                    video.currentTime = Math.max(0, video.currentTime - (1/30));
-                    resetInactivityTimer();
-                }
-                break;
-            case 'Period':
-                if (video.paused) {
-                    video.currentTime = Math.min(video.duration, video.currentTime + (1/30));
-                    resetInactivityTimer();
-                }
-                break;
-        }
+}
+function handleSpeedKeyboard(e) {
+    if (e.key === ',' || e.key === '<') {
+        e.preventDefault();
+        const cur = SPEED_OPTIONS.findIndex(o => o.value === video.playbackRate);
+        if (cur > 0) setPlaybackSpeed(SPEED_OPTIONS[cur-1].value);
+    } else if (e.key === '.' || e.key === '>') {
+        e.preventDefault();
+        const cur = SPEED_OPTIONS.findIndex(o => o.value === video.playbackRate);
+        if (cur < SPEED_OPTIONS.length-1) setPlaybackSpeed(SPEED_OPTIONS[cur+1].value);
     }
+}
+speedButton.addEventListener('click', e => { e.stopPropagation(); toggleSpeedMenu(); });
+document.addEventListener('click', handleDocumentClick);
+document.addEventListener('keydown', handleSpeedKeyboard);
 
-    document.addEventListener('keydown', handleKeyboardShortcuts);
+/* -------------------------------------------------------------------------
+   RESUME / LOCAL STORAGE
+   ------------------------------------------------------------------------- */
+function generateStorageKey(url) { return `video_progress:${url}`; }
+function saveVideoProgress() {
+    if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
+    if (video.currentTime < 1 || video.currentTime > video.duration - 5) return;
+    try {
+        const data = { currentTime: video.currentTime, duration: video.duration, timestamp: Date.now(), url: hlsUrl };
+        localStorage.setItem(videoStorageKey, JSON.stringify(data));
+    } catch (e) { console.error('save progress error', e); }
+}
+function restoreVideoProgress() {
+    if (hasRestoredPosition) return;
+    if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
+    try {
+        const raw = localStorage.getItem(videoStorageKey);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.url !== hlsUrl || data.currentTime <= 1 || data.currentTime >= video.duration - 5) return;
+        hasRestoredPosition = true;
+        const seek = () => {
+            video.currentTime = data.currentTime;
+            showResumeNotification(data.currentTime);
+        };
+        if (video.readyState >= 2) seek();
+        else video.addEventListener('canplay', seek, {once:true});
+    } catch (e) { hasRestoredPosition = true; }
+}
+function showResumeNotification(time) {
+    const el = document.createElement('div');
+    el.className = 'fixed top-20 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm z-50 transition-opacity duration-300';
+    el.textContent = `Resumed from ${formatTime(time)}`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+}
+function clearVideoProgress() {
+    try { localStorage.removeItem(videoStorageKey); } catch (e) { console.error(e); }
+}
+function startProgressSaving() {
+    saveProgressInterval = setInterval(saveVideoProgress, 5000);
+    video.addEventListener('pause', saveVideoProgress);
+    video.addEventListener('seeking', saveVideoProgress);
+    video.addEventListener('ended', clearVideoProgress);
+    window.addEventListener('beforeunload', saveVideoProgress);
+}
+function postTimeUpdateToParent() {
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            event: 'videoTimeUpdate',
+            currentTime: video.currentTime,
+            duration: video.duration,
+            paused: video.paused
+        }, '*');
+    }
+}
 
-    // === HLS INITIALIZATION ===
-    function initHlsPlayer(url) {
-        videoStorageKey = generateStorageKey(url);
-        
-        if (Hls.isSupported()) {
-            isHlsJsMode = true;
-            showLoader(); 
-            
-            const hls = new Hls();
-            hlsInstance = hls; 
+/* -------------------------------------------------------------------------
+   INACTIVITY & GLOBAL EVENT BINDINGS
+   ------------------------------------------------------------------------- */
+function setupInactivityDetection() {
+    const container = videoContainer;
+    ['mousemove','mousedown','touchstart'].forEach(ev => container.addEventListener(ev, resetInactivityTimer));
 
-            hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-                hls.loadSource(url);
-            });
-
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                renderTracksMenu(); 
-            });
-            
-            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu); 
-            hls.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
-
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                console.error('HLS Error Data:', data);
-                if (data.fatal) {
-                    displayError("Fatal HLS error. Cannot play stream.");
-                    hls.destroy();
-                    hideLoader();
-                }
-            });
-
-            hls.attachMedia(video);
-            
-            video.addEventListener('loadedmetadata', () => {
-                restoreVideoProgress();
-            }, { once: true });
-
-            video.addEventListener('canplay', () => {
-                hideLoader();
-                setupInactivityDetection();
-                startProgressSaving();
-            }, { once: true });
-
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            isHlsJsMode = false;
-            showLoader(); 
-            video.src = url;
-            
-            video.addEventListener('loadedmetadata', () => {
-                renderTracksMenu(); 
-                hideLoader();
-                setupInactivityDetection();
-                restoreVideoProgress();
-                startProgressSaving();
-            }, { once: true });
-
+    // top overlay click → mobile toggle / desktop play‑pause
+    topOverlay.addEventListener('click', () => {
+        const mobile = window.innerWidth <= 1000;
+        if (mobile) {
+            const els = [document.getElementById('center-controls-mobile-only'), document.getElementById('controls-bar')];
+            const anyHidden = els.some(el => el.style.display === 'none');
+            els.forEach(el => el.style.display = anyHidden ? 'flex' : 'none');
         } else {
-            displayError('Your browser does not support HLS streaming, even with hls.js.');
-            hideLoader();
+            toggleVideoPlayPause();
         }
-    }
+    });
 
-    window.onload = () => {
-        initHlsPlayer(hlsUrl);
-    };
+    customPlayButton.addEventListener('click', toggleVideoPlayPause);
+    centerPlayPauseButton.addEventListener('click', toggleVideoPlayPause);
+    fullscreenButton.addEventListener('click', toggleFullscreen);
+    skipBackwardButton.addEventListener('click', handleSkipBackward);
+    skipForwardButton.addEventListener('click', handleSkipForward);
+    mobileSkipBackwardButton.addEventListener('click', handleSkipBackward);
+    mobileSkipForwardButton.addEventListener('click', handleSkipForward);
+    muteButton.addEventListener('click', toggleMute);
+    audioSubtitleToggle.addEventListener('click', e => { e.stopPropagation(); toggleAudioSubtitleMenu(); });
+
+    seekBar.addEventListener('mousedown', startSeeking);
+    seekBar.addEventListener('touchstart', startSeeking, {passive:true});
+
+    volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
+    volumeControlWrapper.addEventListener('mouseleave', () => setTimeout(() => { if (!isVolumeAdjusting) volumeSliderContainer.classList.add('hidden'); }, 300));
+
+    document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
+    /* video events */
+    video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
+    video.addEventListener('progress', updateBufferProgress);
+    video.addEventListener('loadedmetadata', () => {
+        updateProgress(); updateBufferProgress();
+        remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
+    });
+    video.addEventListener('volumechange', updateVolumeSlider);
+    video.addEventListener('waiting', showLoader);
+    video.addEventListener('playing', hideLoader);
+    video.addEventListener('canplay', hideLoader);
+    video.addEventListener('pause', () => {
+        showControls();
+        updateBottomPlayPauseIcon(true);
+        updateCenterPlayPauseIcon(true);
+        clearTimeout(inactivityTimer);
+    });
+    video.addEventListener('play', () => {
+        updateBottomPlayPauseIcon(false);
+        updateCenterPlayPauseIcon(false);
+        resetInactivityTimer();
+    });
+    video.addEventListener('ended', () => {
+        showControls();
+        updateBottomPlayPauseIcon(true);
+        updateCenterPlayPauseIcon(true);
+        hideLoader();
+    });
+
+    if (!isHlsJsMode && video.audioTracks) video.audioTracks.addEventListener('change', renderTracksMenu);
+
+    /* initial UI state */
+    lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
+    updateProgress(); updateBufferProgress(); updateVolumeSlider(); updateFullscreenIcon();
+
+    if (video.paused || video.ended) {
+        showControls();
+        updateBottomPlayPauseIcon(true);
+        updateCenterPlayPauseIcon(true);
+    } else {
+        updateBottomPlayPauseIcon(false);
+        updateCenterPlayPauseIcon(false);
+        resetInactivityTimer();
+    }
+}
+
+/* -------------------------------------------------------------------------
+   VOLUME SLIDER (vertical)
+   ------------------------------------------------------------------------- */
+function calculateNewVolume(clientY) {
+    const rect = volumeSliderTrack.getBoundingClientRect();
+    let dist = rect.bottom - clientY;
+    dist = Math.max(0, Math.min(dist, rect.height));
+    return dist / rect.height;
+}
+function handleVolumeAdjust(e) {
+    e.preventDefault();
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const vol = calculateNewVolume(y);
+    video.volume = vol;
+    if (vol > 0) { video.muted = false; lastKnownVolume = vol; }
+    else video.muted = true;
+    updateVolumeSlider();
+}
+function startVolumeAdjusting(e) {
+    isVolumeAdjusting = true;
+    e.preventDefault();
+    window.addEventListener('mousemove', handleVolumeAdjust);
+    window.addEventListener('mouseup', endVolumeAdjusting);
+    window.addEventListener('touchmove', handleVolumeAdjust);
+    window.addEventListener('touchend', endVolumeAdjusting);
+    handleVolumeAdjust(e);
+}
+function endVolumeAdjusting() {
+    if (!isVolumeAdjusting) return;
+    isVolumeAdjusting = false;
+    window.removeEventListener('mousemove', handleVolumeAdjust);
+    window.removeEventListener('mouseup', endVolumeAdjusting);
+    window.removeEventListener('touchmove', handleVolumeAdjust);
+    window.removeEventListener('touchend', endVolumeAdjusting);
+    resetInactivityTimer();
+}
+volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
+volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, {passive:true});
+
+/* -------------------------------------------------------------------------
+   KEYBOARD SHORTCUTS
+   ------------------------------------------------------------------------- */
+function handleKeyboardShortcuts(e) {
+    if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+
+    const prevent = ['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if (prevent.includes(e.code)) e.preventDefault();
+
+    switch (e.code) {
+        case 'Space':
+        case 'KeyK': toggleVideoPlayPause(); break;
+        case 'ArrowLeft': video.currentTime = Math.max(0, video.currentTime-5); resetInactivityTimer(); break;
+        case 'ArrowRight': video.currentTime = Math.min(video.duration, video.currentTime+5); resetInactivityTimer(); break;
+        case 'KeyJ': handleSkipBackward(); break;
+        case 'KeyL': handleSkipForward(); break;
+        case 'ArrowUp':
+            e.preventDefault();
+            video.volume = Math.min(1, video.volume+0.05);
+            video.muted = false; lastKnownVolume = video.volume;
+            updateVolumeSlider(); resetInactivityTimer(); break;
+        case 'ArrowDown':
+            e.preventDefault();
+            video.volume = Math.max(0, video.volume-0.05);
+            if (video.volume===0) video.muted = true;
+            updateVolumeSlider(); resetInactivityTimer(); break;
+        case 'KeyM': toggleMute(); break;
+        case 'KeyF': toggleFullscreen(); break;
+        case 'KeyC':
+            // toggle subtitles (first available)
+            if (isHlsJsMode && hlsInstance) {
+                const cur = hlsInstance.subtitleTrack;
+                hlsInstance.subtitleTrack = cur === -1 ? 0 : -1;
+            } else if (video.textTracks) {
+                const subs = Array.from(video.textTracks).filter(t=>t781.kind==='subtitles'||t.kind==='captions');
+                const showing = subs.some(t=>t.mode==='showing');
+                subs.forEach((t,i)=> t.mode = showing ? 'disabled' : (i===0?'showing':'disabled'));
+            }
+            renderTracksMenu(); resetInactivityTimer(); break;
+        default:
+            if (e.code.startsWith('Digit')) {
+                const d = parseInt(e.code.replace('Digit',''));
+                video.currentTime = (video.duration * d) / 10;
+                resetInactivityTimer();
+            } else if (e.code === 'Home') { video.currentTime = 0; resetInactivityTimer(); }
+            else if (e.code === 'End') { video.currentTime = video.duration; resetInactivityTimer(); }
+            else if (e.code === 'Comma' && video.paused) { video.currentTime = Math.max(0, video.currentTime-1/30); resetInactivityTimer(); }
+            else if (e.code === 'Period' && video.paused) { video.currentTime = Math.min(video.duration, video.currentTime+1/30); resetInactivityTimer(); }
+    }
+}
+document.addEventListener('keydown Reve', handleKeyboardShortcuts);
+
+/* -------------------------------------------------------------------------
+   HLS INITIALISATION
+   ------------------------------------------------------------------------- */
+function initHlsPlayer(url) {
+    videoStorageKey = generateStorageKey(url);
+
+    if (Hls.isSupported()) {
+        isHlsJsMode = true;
+        showLoader();
+        const h = new Hls();
+        hlsInstance = h;
+
+        h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
+        h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
+        h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
+        h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
+        h.on(Hls.Events.ERROR, (ev, data) => {
+            if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
+        });
+
+        h.attachMedia(video);
+
+        video.addEventListener('loadedmetadata', () => restoreVideoProgress(), {once:true});
+        video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); }, {once:true});
+    }
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        isHlsJsMode = false;
+        showLoader();
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+            renderTracksMenu(); hideLoader(); setupInactivityDetection();
+            restoreVideoProgress(); startProgressSaving();
+        }, {once:true});
+    }
+    else {
+        displayError('Browser does not support HLS');
+        hideLoader();
+    }
+}
+
+/* -------------------------------------------------------------------------
+   START
+   ------------------------------------------------------------------------- */
+window.onload = () => initHlsPlayer(hlsUrl);
 </script>
 </body>
 </html>
