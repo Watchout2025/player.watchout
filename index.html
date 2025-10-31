@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>HLS Player – New Back‑10 & Speed Icons</title>
+    <title>HLS Player – Double-Tap Skip + Animated Hint</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
@@ -37,12 +37,27 @@
         #audio-tracks-container::-webkit-scrollbar-track,#subtitle-tracks-container::-webkit-scrollbar-track{background:transparent}
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+        /* NEW: Double-tap skip hint */
+        #skip-hint{
+            font-weight:900;
+            text-shadow:0 0 20px rgba(0,0,0,.8);
+            transform:scale(0.8);
+            transition:transform .15s ease-out,opacity .3s ease-out;
+        }
+        #skip-hint.show{
+            opacity:1 !important;
+            transform:scale(1);
+        }
     </style>
 </head>
 <body>
 
 <div id="video-container" class="relative">
     <video id="video" class="w-full h-full object-contain"></video>
+
+    <!-- NEW: Animated skip hint -->
+    <div id="skip-hint" class="fixed inset-0 flex items-center justify-center pointer-events-none z-40 text-6xl md:text-8xl text-white opacity-0"></div>
 
     <!-- Loading spinner -->
     <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
@@ -234,7 +249,7 @@
                         </div>
                     </div>
 
-                    <!-- PLAYBACK SPEED (InternetSpeedMedium icon) -->
+                    <!-- PLAYBACK SPEED -->
                     <button id="speed-button"
                             class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                             title="Playback speed">
@@ -286,6 +301,7 @@
 const video                = document.getElementById('video');
 const videoContainer       = document.getElementById('video-container');
 const errorMessageDiv      = document.getElementById('error-message');
+const skipHint             = document.getElementById('skip-hint');        // NEW
 
 const topOverlay           = document.getElementById('top-overlay');
 const bottomOverlay        = document.getElementById('bottom-overlay');
@@ -329,6 +345,45 @@ const centerPauseIcon       = document.getElementById('center-pause-icon');
 
 const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-button');
 const mobileSkipForwardButton  = document.getElementById('mobile-skip-forward-button');
+
+/* -------------------------------------------------------------------------
+   DOUBLE-TAP SKIP + ANIMATED HINT
+   ------------------------------------------------------------------------- */
+let lastTap = 0;
+videoContainer.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTap < 350) {  // double-tap
+        const rect = video.getBoundingClientRect();
+        const x = e.changedTouches[0].clientX - rect.left;
+        if (x < rect.width / 2) {
+            handleSkipBackward();
+        } else {
+            handleSkipForward();
+        }
+    }
+    lastTap = now;
+});
+
+function showSkipHint(text) {
+    skipHint.textContent = text;
+    skipHint.classList.add('show');
+    clearTimeout(skipHint._timer);
+    skipHint._timer = setTimeout(() => skipHint.classList.remove('show'), 600);
+}
+
+/* -------------------------------------------------------------------------
+   SKIP BUTTONS (now use showSkipHint)
+   ------------------------------------------------------------------------- */
+function handleSkipBackward() {
+    video.currentTime = Math.max(0, video.currentTime - 10);
+    showSkipHint('-10 s');
+    resetInactivityTimer();
+}
+function handleSkipForward() {
+    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    showSkipHint('+10 s');
+    resetInactivityTimer();
+}
 
 /* -------------------------------------------------------------------------
    PLAYBACK‑SPEED UI
@@ -569,12 +624,6 @@ function updateFullscreenIcon() {
 }
 
 /* -------------------------------------------------------------------------
-   SKIP BUTTONS
-   ------------------------------------------------------------------------- */
-function handleSkipBackward() { video.currentTime = Math.max(0, video.currentTime - 10); resetInactivityTimer(); }
-function handleSkipForward()  { video.currentTime = Math.min(video.duration, video.currentTime + 10); resetInactivityTimer(); }
-
-/* -------------------------------------------------------------------------
    AUDIO / SUBTITLE MENU
    ------------------------------------------------------------------------- */
 function toggleAudioSubtitleMenu() {
@@ -799,7 +848,7 @@ function postTimeUpdateToParent() {
    ------------------------------------------------------------------------- */
 function setupInactivityDetection() {
     const container = videoContainer;
-    ['mousemove','mousedown','touchstart'].forEach(ev => container.addEventListener(ev, resetInactivityTimer));
+    ['mousemove','mousedown','touchstart','touchend'].forEach(ev => container.addEventListener(ev, resetInactivityTimer, ev.startsWith('touch') ? {passive:true} : false));
 
     topOverlay.addEventListener('click', () => {
         const mobile = window.innerWidth <= 1000;
