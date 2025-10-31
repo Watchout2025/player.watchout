@@ -1,9 +1,9 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>HLS Player – Double-Tap Skip + Animated Hint</title>
+    <title>HLS Player – Double-Tap Skip + Left/Right Hint</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
@@ -38,17 +38,20 @@
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-        /* NEW: Double-tap skip hint */
+        /* ---- Left / Right skip hints ---- */
         #skip-hint{
-            font-weight:900;
+            position:fixed;top:50%;transform:translateY(-50%);
+            font-weight:900;font-size:3.5rem;
             text-shadow:0 0 20px rgba(0,0,0,.8);
-            transform:scale(0.8);
-            transition:transform .15s ease-out,opacity .3s ease-out;
+            opacity:0;
+            transition:opacity .3s ease,transform .15s ease-out;
+            z-index:40;
+            pointer-events:none;
         }
-        #skip-hint.show{
-            opacity:1 !important;
-            transform:scale(1);
-        }
+        @media (min-width:768px){ #skip-hint{font-size:5rem;} }
+        #skip-hint.show{opacity:1;transform:translateY(-50%) scale(1);}
+        #skip-hint.left{left:8%;}
+        #skip-hint.right{right:8%;}
     </style>
 </head>
 <body>
@@ -56,8 +59,8 @@
 <div id="video-container" class="relative">
     <video id="video" class="w-full h-full object-contain"></video>
 
-    <!-- NEW: Animated skip hint -->
-    <div id="skip-hint" class="fixed inset-0 flex items-center justify-center pointer-events-none z-40 text-6xl md:text-8xl text-white opacity-0"></div>
+    <!-- Left / Right skip hint -->
+    <div id="skip-hint" class="text-white"></div>
 
     <!-- Loading spinner -->
     <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
@@ -301,7 +304,7 @@
 const video                = document.getElementById('video');
 const videoContainer       = document.getElementById('video-container');
 const errorMessageDiv      = document.getElementById('error-message');
-const skipHint             = document.getElementById('skip-hint');        // NEW
+const skipHint             = document.getElementById('skip-hint');
 
 const topOverlay           = document.getElementById('top-overlay');
 const bottomOverlay        = document.getElementById('bottom-overlay');
@@ -347,12 +350,12 @@ const mobileSkipBackwardButton = document.getElementById('mobile-skip-backward-b
 const mobileSkipForwardButton  = document.getElementById('mobile-skip-forward-button');
 
 /* -------------------------------------------------------------------------
-   DOUBLE-TAP SKIP + ANIMATED HINT
+   DOUBLE-TAP SKIP + LEFT/RIGHT HINT
    ------------------------------------------------------------------------- */
 let lastTap = 0;
 videoContainer.addEventListener('touchend', e => {
     const now = Date.now();
-    if (now - lastTap < 350) {  // double-tap
+    if (now - lastTap < 350) {
         const rect = video.getBoundingClientRect();
         const x = e.changedTouches[0].clientX - rect.left;
         if (x < rect.width / 2) {
@@ -364,24 +367,23 @@ videoContainer.addEventListener('touchend', e => {
     lastTap = now;
 });
 
-function showSkipHint(text) {
+function showSkipHint(text, isBackward) {
     skipHint.textContent = text;
+    skipHint.classList.toggle('left', isBackward);
+    skipHint.classList.toggle('right', !isBackward);
     skipHint.classList.add('show');
     clearTimeout(skipHint._timer);
     skipHint._timer = setTimeout(() => skipHint.classList.remove('show'), 600);
 }
 
-/* -------------------------------------------------------------------------
-   SKIP BUTTONS (now use showSkipHint)
-   ------------------------------------------------------------------------- */
 function handleSkipBackward() {
     video.currentTime = Math.max(0, video.currentTime - 10);
-    showSkipHint('-10 s');
+    showSkipHint('-10 s', true);
     resetInactivityTimer();
 }
 function handleSkipForward() {
     video.currentTime = Math.min(video.duration, video.currentTime + 10);
-    showSkipHint('+10 s');
+    showSkipHint('+10 s', false);
     resetInactivityTimer();
 }
 
@@ -669,7 +671,6 @@ function renderTracksMenu() {
         return name || `Track ${track.id ?? track.groupId ?? ''}`;
     };
 
-    /* ---- AUDIO ---- */
     const audioTracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
     const curAudioIdx = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t=>t.enabled) : -1);
 
@@ -688,7 +689,6 @@ function renderTracksMenu() {
         });
     }
 
-    /* ---- SUBTITLES ---- */
     const subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : []);
     const curSubIdx = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t=>t.mode==='showing');
 
