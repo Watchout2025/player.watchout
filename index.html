@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, vieport-fit=cover">
     <title>Functional HLS Video Player (Updated Loading UX)</title>
     
 <script src="https://cdn.tailwindcss.com"></script>
@@ -17,10 +17,10 @@
             height: 100vh;
             width: 100vw;
             margin: 0;
-            padding: 0;
+            padding-bottom: env(safe-area-inser-bottom);
             overflow: hidden;
             font-family: 'Inter', sans-serif;
-            background-color: #0d1117;
+            background-color: #000;
         }
         .bottom-control-button:hover svg {
     transform: scale(1.2);
