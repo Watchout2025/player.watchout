@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>HLS Player – Expanded JS + New Speed Icon</title>
+    <title>HLS Player – New Back‑10 & Speed Icons</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
@@ -55,9 +55,10 @@
     <div id="center-play-pause-overlay"
          class="flex-col absolute left-1/2 right-1/2 inset-0 flex items-center justify-center z-10 transition-opacity duration-500 opacity-100 pointer-events-auto">
         <div id="center-controls-mobile-only" class="flex justify-center items-center">
+            <!-- BACK 10s (mobile) -->
             <button id="mobile-skip-backward-button" class="xl:hidden text-white p-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
-                <!-- back 10s icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true" class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24">
+                <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true"
+                     class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24" data-icon="Back10Medium">
                     <path fill="currentColor" fill-rule="evenodd"
                           d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
                           clip-rule="evenodd"/>
@@ -79,9 +80,9 @@
                 </svg>
             </button>
 
+            <!-- FORWARD 10s (mobile) -->
             <button id="mobile-skip-forward-button"
                     class="xl:hidden text-white p-3 hover:opacity-80 transition-opacity duration-200 focus:outline-none space-x-6">
-                <!-- forward 10s icon -->
                 <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none" aria-hidden="true"
                      class="w-10 h-10 md:w-14 md:h-14" viewBox="0 0 24 24">
                     <path fill="currentColor" fill-rule="evenodd"
@@ -137,18 +138,19 @@
                         </svg>
                     </button>
 
-                    <!-- Skip back -->
+                    <!-- BACK 10s (desktop) -->
                     <button id="skip-backward-button"
                             class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
-                             aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
+                             aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full"
+                             viewBox="0 0 24 24" data-icon="Back10Medium">
                             <path fill="currentColor" fill-rule="evenodd"
-                                  d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1  0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
+                                  d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
                                   clip-rule="evenodd"/>
                         </svg>
                     </button>
 
-                    <!-- Skip forward -->
+                    <!-- FORWARD 10s -->
                     <button id="skip-forward-button"
                             class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
@@ -232,7 +234,7 @@
                         </div>
                     </div>
 
-                    <!-- PLAYBACK SPEED (new icon) -->
+                    <!-- PLAYBACK SPEED (InternetSpeedMedium icon) -->
                     <button id="speed-button"
                             class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                             title="Playback speed">
@@ -588,14 +590,12 @@ function toggleAudioSubtitleMenu() {
     }
 }
 function handleDocumentClick(e) {
-    // close audio/subtitle menu if click outside
     if (!audioSubtitleMenu.classList.contains('hidden') &&
         !audioSubtitleMenu.contains(e.target) &&
         !audioSubtitleToggle.contains(e.target)) {
         audioSubtitleMenu.classList.add('hidden');
         resetInactivityTimer();
     }
-    // close speed menu if click outside
     if (!speedMenu.classList.contains('hidden') &&
         !speedMenu.contains(e.target) &&
         !speedButton.contains(e.target)) {
@@ -643,7 +643,6 @@ function renderTracksMenu() {
     const subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : []);
     const curSubIdx = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t=>t.mode==='showing');
 
-    // OFF entry
     const offLi = document.createElement('li');
     offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx===-1?'font-bold text-white':'text-gray-400'}`;
     offLi.textContent = 'Off';
@@ -802,7 +801,6 @@ function setupInactivityDetection() {
     const container = videoContainer;
     ['mousemove','mousedown','touchstart'].forEach(ev => container.addEventListener(ev, resetInactivityTimer));
 
-    // top overlay click → mobile toggle / desktop play‑pause
     topOverlay.addEventListener('click', () => {
         const mobile = window.innerWidth <= 1000;
         if (mobile) {
@@ -832,7 +830,6 @@ function setupInactivityDetection() {
 
     document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
-    /* video events */
     video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
     video.addEventListener('progress', updateBufferProgress);
     video.addEventListener('loadedmetadata', () => {
@@ -863,7 +860,6 @@ function setupInactivityDetection() {
 
     if (!isHlsJsMode && video.audioTracks) video.audioTracks.addEventListener('change', renderTracksMenu);
 
-    /* initial UI state */
     lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
     updateProgress(); updateBufferProgress(); updateVolumeSlider(); updateFullscreenIcon();
 
@@ -879,7 +875,7 @@ function setupInactivityDetection() {
 }
 
 /* -------------------------------------------------------------------------
-   VOLUME SLIDER (vertical)
+   VOLUME SLIDER
    ------------------------------------------------------------------------- */
 function calculateNewVolume(clientY) {
     const rect = volumeSliderTrack.getBoundingClientRect();
@@ -946,12 +942,11 @@ function handleKeyboardShortcuts(e) {
         case 'KeyM': toggleMute(); break;
         case 'KeyF': toggleFullscreen(); break;
         case 'KeyC':
-            // toggle subtitles (first available)
             if (isHlsJsMode && hlsInstance) {
                 const cur = hlsInstance.subtitleTrack;
                 hlsInstance.subtitleTrack = cur === -1 ? 0 : -1;
             } else if (video.textTracks) {
-                const subs = Array.from(video.textTracks).filter(t=>t781.kind==='subtitles'||t.kind==='captions');
+                const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
                 const showing = subs.some(t=>t.mode==='showing');
                 subs.forEach((t,i)=> t.mode = showing ? 'disabled' : (i===0?'showing':'disabled'));
             }
@@ -967,7 +962,7 @@ function handleKeyboardShortcuts(e) {
             else if (e.code === 'Period' && video.paused) { video.currentTime = Math.min(video.duration, video.currentTime+1/30); resetInactivityTimer(); }
     }
 }
-document.addEventListener('keydown Reve', handleKeyboardShortcuts);
+document.addEventListener('keydown', handleKeyboardShortcuts);
 
 /* -------------------------------------------------------------------------
    HLS INITIALISATION
