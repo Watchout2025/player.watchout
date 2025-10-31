@@ -661,7 +661,7 @@
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             } else {
-                videoContainer.requestFullscreen().catch(err => {
+                videoContainer.requestFullscreen({navigationUI: "hide"}).catch(err => {
                     displayError(`Error enabling full-screen: ${err.message}`);
                 });
             }
