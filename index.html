@@ -1301,132 +1301,199 @@
                 hideLoader();
             }
         }
-        /* --------------------------------------------------------------
-   THUMBNAIL PREVIEW (VTT sprite or per-segment images)
+       /* --------------------------------------------------------------
+   THUMBNAIL PREVIEW (Tailored for https://s3u.aurorapathmedia.space/v4/pp/1ccham/cf-master.txt)
    -------------------------------------------------------------- */
-const thumbnailPreview   = document.getElementById('thumbnail-preview');
-const thumbnailImg       = document.getElementById('thumbnail-img');
-const thumbnailTime      = document.getElementById('thumbnail-time');
+const thumbnailPreview = document.getElementById('thumbnail-preview');
+const thumbnailImg = document.getElementById('thumbnail-img');
+const thumbnailTime = document.getElementById('thumbnail-time');
 
-/* 1. Try to auto-detect a WebVTT sprite file that usually sits next to the master playlist */
+// Specific manifest URL for this stream
+const manifestUrl = 'https://s3u.aurorapathmedia.space/v4/pp/1ccham/cf-master.txt';
 let vttUrl = null;
-function guessVttUrl(masterUrl) {
-    // e.g. master.m3u8  →  master.vtt  or  thumbnails.vtt
-    const base = masterUrl.split('/').slice(0, -1).join('/');
-    return `${base}/thumbnails.vtt`;   // change if your file has another name
-}
-
-/* 2. Load the VTT file and parse the cues */
 let vttCues = [];
-async function loadVtt(url) {
-    try {
-        const resp = await fetch(url, { method: 'HEAD' });
-        if (!resp.ok) return;
-    } catch (_) { return; }
 
-    const text = await (await fetch(url)).text();
-    const lines = text.split('\n');
-    let cue = null;
-    for (const line of lines) {
-        if (line.trim() === '' && cue) { vttCues.push(cue); cue = null; continue; }
-        if (!cue) cue = { start: 0, end: 0, url: '', x: 0, y: 0, w: 0, h: 0 };
-        if (line.includes('-->')) {
-            const [s, e] = line.split('-->').map(t => t.trim());
-            cue.start = parseTime(s); cue.end = parseTime(e);
-        } else if (line.includes('#xywh=')) {
-            const m = line.match(/#xywh=(\d+),(\d+),(\d+),(\d+)/);
-            if (m) { cue.x = +m[1]; cue.y = +m[2]; cue.w = +m[3]; cue.h = +m[4]; }
-        } else if (line.startsWith('http')) {
-            cue.url = line.trim();
+// 1. Parse manifest for thumbnail VTT reference (e.g., #EXT-X-THUMBNAIL or custom line)
+async function parseManifestForVtt(manifestText) {
+    const lines = manifestText.split('\n');
+    for (let line of lines) {
+        line = line.trim();
+        // Look for #EXT-X-THUMBNAIL:TYPE=IMAGE or similar
+        if (line.includes('#EXT-X-THUMBNAIL') && line.includes('URI=')) {
+            const uriMatch = line.match(/URI="([^"]+)"/);
+            if (uriMatch) {
+                vttUrl = new URL(uriMatch[1], manifestUrl).href;
+                console.log('Found VTT in manifest:', vttUrl);
+                return;
+            }
+        }
+        // Fallback: Look for 'thumbnails.vtt' or 'thumbnail.vtt' line
+        if (line.includes('thumbnails.vtt') || line.includes('thumbnail.vtt')) {
+            vttUrl = new URL(line, manifestUrl).href;
+            console.log('Guessed VTT from manifest line:', vttUrl);
+            return;
         }
     }
-    if (cue) vttCues.push(cue);
-}
-function parseTime(str) {
-    const p = str.split(':').map(parseFloat);
-    return p[0]*3600 + p[1]*60 + p[2];
+    // Default guess if not found
+    vttUrl = manifestUrl.replace('cf-master.txt', 'thumbnails.vtt');
+    console.log('Default VTT guess:', vttUrl);
 }
 
-/* 3. Find the cue that covers a given playback second */
+// 2. Load and parse VTT (unchanged core logic)
+async function loadVtt(url) {
+    try {
+        // Quick HEAD check
+        const headResp = await fetch(url, { method: 'HEAD' });
+        if (!headResp.ok) {
+            console.warn('VTT not found at', url);
+            return;
+        }
+    } catch (e) {
+        console.warn('VTT fetch failed:', e.message);
+        return;
+    }
+
+    try {
+        const text = await (await fetch(url)).text();
+        const lines = text.split('\n');
+        let cue = null;
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === '' && cue) {
+                vttCues.push(cue);
+                cue = null;
+                continue;
+            }
+            if (!cue) {
+                cue = { start: 0, end: Infinity, url: '', x: 0, y: 0, w: 0, h: 0 };
+            }
+            if (trimmed.includes('-->')) {
+                const [s, e] = trimmed.split('-->').map(t => t.trim());
+                cue.start = parseTime(s);
+                cue.end = parseTime(e);
+            } else if (trimmed.includes('#xywh=')) {
+                const m = trimmed.match(/#xywh=(\d+),(\d+),(\d+),(\d+)/);
+                if (m) {
+                    cue.x = +m[1];
+                    cue.y = +m[2];
+                    cue.w = +m[3];
+                    cue.h = +m[4];
+                }
+            } else if (trimmed.startsWith('http') || trimmed.endsWith('.jpg') || trimmed.endsWith('.png')) {
+                cue.url = trimmed;
+            }
+        }
+        if (cue) vttCues.push(cue);
+        console.log(`Loaded ${vttCues.length} thumbnail cues`);
+    } catch (e) {
+        console.error('VTT parse error:', e);
+    }
+}
+
+function parseTime(str) {
+    const parts = str.split(':');
+    const h = parseFloat(parts[0]) || 0;
+    const m = parseFloat(parts[1]) || 0;
+    const s = parseFloat(parts[2]?.split('.')[0] || 0) || 0;
+    return h * 3600 + m * 60 + s;
+}
+
+// 3. Find cue for time (with Infinity end fallback)
 function cueForTime(sec) {
     return vttCues.find(c => sec >= c.start && sec < c.end) || null;
 }
 
-/* 4. Show / hide preview on mouse/touch move over the bar */
+// 4. Show preview at position
 function showThumbnailAt(clientX) {
-    if (!video.duration) return;
+    if (!video.duration || vttCues.length === 0) {
+        hideThumbnail();
+        return;
+    }
     const rect = seekBar.getBoundingClientRect();
-    const offsetX = clientX - rect.left;
-    const ratio = Math.max(0, Math.min(1, offsetX / rect.width));
+    const offsetX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const ratio = offsetX / rect.width;
     const time = video.duration * ratio;
 
-    // position the box
-    const boxW = thumbnailPreview.offsetWidth;
-    let left = offsetX - boxW/2;
+    // Position preview box
+    const boxW = 160; // Fixed width for positioning
+    let left = offsetX - boxW / 2;
     if (left < 0) left = 0;
     if (left + boxW > rect.width) left = rect.width - boxW;
-    thumbnailPreview.style.left = `${left + rect.left - videoContainer.getBoundingClientRect().left}px`;
+    thumbnailPreview.style.left = `${left + rect.left}px`; // Relative to container
+    thumbnailPreview.style.transform = 'none'; // Override center for precise pos
 
-    // time label
+    // Time label
     thumbnailTime.textContent = formatTime(time);
 
-    // image
+    // Image from cue
     const cue = cueForTime(time);
     if (cue && cue.url) {
-        // sprite sheet → use background-position / clip
         thumbnailImg.src = cue.url;
-        thumbnailImg.style.objectPosition = `-${cue.x}px -${cue.y}px`;
-        thumbnailImg.style.objectFit = 'none';
         thumbnailImg.style.width = `${cue.w}px`;
         thumbnailImg.style.height = `${cue.h}px`;
-        thumbnailImg.style.clipPath = `inset(0 0 0 0)`;
+        thumbnailImg.style.objectPosition = `-${cue.x}px -${cue.y}px`;
+        thumbnailImg.style.objectFit = 'none';
+        thumbnailPreview.style.width = `${cue.w}px`;
+        thumbnailPreview.style.height = `${cue.h}px`;
     } else {
-        // fallback – show nothing (or a static placeholder)
-        thumbnailImg.removeAttribute('src');
-        thumbnailImg.style.objectFit = 'cover';
+        // Fallback: Hide or static img (e.g., thumbnailImg.src = 'placeholder.jpg')
+        thumbnailPreview.style.display = 'none';
+        return;
     }
 
     thumbnailPreview.classList.add('show');
+    thumbnailPreview.style.display = 'block';
 }
+
 function hideThumbnail() {
     thumbnailPreview.classList.remove('show');
 }
 
-/* 5. Wire the events */
+// 5. Event wiring (desktop hover + mobile touch-hold)
 let thumbMoveHandler = null;
 seekBar.addEventListener('mouseenter', () => {
-    if (thumbMoveHandler) return;
-    thumbMoveHandler = (e) => {
-        const x = e.touches ? e.touches[0].clientX : e.clientX;
-        showThumbnailAt(x);
-    };
+    if (thumbMoveHandler || vttCues.length === 0) return;
+    thumbMoveHandler = (e) => showThumbnailAt(e.clientX || e.touches[0].clientX);
     window.addEventListener('mousemove', thumbMoveHandler);
-    window.addEventListener('touchmove', thumbMoveHandler, {passive:true});
 });
 seekBar.addEventListener('mouseleave', () => {
     hideThumbnail();
     if (thumbMoveHandler) {
         window.removeEventListener('mousemove', thumbMoveHandler);
-        window.removeEventListener('touchmove', thumbMoveHandler);
         thumbMoveHandler = null;
     }
 });
 seekBar.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     showThumbnailAt(e.touches[0].clientX);
-}, {passive:true});
-seekBar.addEventListener('touchend', hideThumbnail);
+    thumbMoveHandler = (ev) => showThumbnailAt(ev.touches[0].clientX);
+    window.addEventListener('touchmove', thumbMoveHandler, { passive: false });
+}, { passive: false });
+seekBar.addEventListener('touchend', (e) => {
+    hideThumbnail();
+    if (thumbMoveHandler) {
+        window.removeEventListener('touchmove', thumbMoveHandler);
+        thumbMoveHandler = null;
+    }
+});
 
-/* 6. Kick-off – guess VTT URL and load it */
+// 6. Initialize: Load manifest → Parse for VTT → Load VTT
+async function initThumbnails() {
+    try {
+        const manifestText = await (await fetch(manifestUrl)).text();
+        await parseManifestForVtt(manifestText);
+        await loadVtt(vttUrl);
+    } catch (e) {
+        console.error('Thumbnail init failed:', e);
+    }
+}
+
+// Hook into HLS events (call after manifest parsed)
 if (isHlsJsMode) {
-    // HLS.js exposes the resolved URLs after manifest is parsed
-    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        vttUrl = guessVttUrl(hlsUrl);
-        loadVtt(vttUrl);
-    });
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, initThumbnails);
 } else {
-    // native HLS – try immediately
-    vttUrl = guessVttUrl(hlsUrl);
-    loadVtt(vttUrl);
+    // Native: Load on metadata
+    video.addEventListener('loadedmetadata', initThumbnails, { once: true });
 }
 
         window.onload = () => {
