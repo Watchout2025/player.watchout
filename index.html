@@ -887,15 +887,8 @@ function setupInactivityDetection() {
     video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
     video.addEventListener('progress', updateBufferProgress);
     video.addEventListener('loadedmetadata', () => {
-    updateProgress(); updateBufferProgress();
-    remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
-
-    // Hide timeline row immediately if this is a live stream (duration === Infinity)
-    if (!isFinite(video.duration)) {
-        document.getElementById('timeline-row').style.display = 'none';
-    } else {
-        document.getElementById('timeline-row').style.display = '';
-    }
+        updateProgress(); updateBufferProgress();
+        remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
     });
     video.addEventListener('volumechange', updateVolumeSlider);
     video.addEventListener('waiting', showLoader);
@@ -1036,7 +1029,11 @@ function initHlsPlayer(url) {
         showLoader();
         const h = new Hls();
         hlsInstance = h;
-
+        // Add this inside the Hls.isSupported() block
+        h.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+            isLive = data.details.live;
+            timelineRow.style.display = isLive ? 'none' : 'flex';
+        });
         h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
         h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
@@ -1048,6 +1045,15 @@ function initHlsPlayer(url) {
         h.attachMedia(video);
 
         video.addEventListener('loadedmetadata', () => restoreVideoProgress(), {once:true});
+        video.addEventListener('durationchange', () => {
+            isLive = (video.duration === Infinity);
+            if (isLive) {
+                timelineRow.style.display = 'none';
+            } else {
+                timelineRow.style.display = 'flex';
+                durationLabel.innerText = formatTime(video.duration);
+            }
+        });
         video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); }, {once:true});
     }
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -1055,8 +1061,11 @@ function initHlsPlayer(url) {
         showLoader();
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
-            renderTracksMenu(); hideLoader(); setupInactivityDetection();
-            restoreVideoProgress(); startProgressSaving();
+            renderTracksMenu(); 
+            hideLoader(); 
+            setupInactivityDetection();
+            isLive = (video.duration === Infinity);
+            timelineRow.style.display = isLive ? 'none' : 'flex';
         }, {once:true});
     }
     else {
