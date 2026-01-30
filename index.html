@@ -887,8 +887,15 @@ function setupInactivityDetection() {
     video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
     video.addEventListener('progress', updateBufferProgress);
     video.addEventListener('loadedmetadata', () => {
-        updateProgress(); updateBufferProgress();
-        remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
+    updateProgress(); updateBufferProgress();
+    remainingTimeDisplay.textContent = `-${formatTime(video.duration)}`;
+
+    // Hide timeline row immediately if this is a live stream (duration === Infinity)
+    if (!isFinite(video.duration)) {
+        document.getElementById('timeline-row').style.display = 'none';
+    } else {
+        document.getElementById('timeline-row').style.display = '';
+    }
     });
     video.addEventListener('volumechange', updateVolumeSlider);
     video.addEventListener('waiting', showLoader);
