@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>HLS Player – Double-Tap Skip + Left/Right Hint</title>
+    <title>Netout Player</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
@@ -1019,11 +1019,37 @@ function handleKeyboardShortcuts(e) {
 document.addEventListener('keydown', handleKeyboardShortcuts);
 
 /* -------------------------------------------------------------------------
-   HLS INITIALISATION
+   HLS / DIRECT VIDEO INITIALISATION
    ------------------------------------------------------------------------- */
+function isDirectVideoUrl(url) {
+    try {
+        const path = new URL(url).pathname.toLowerCase();
+        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v)(\?|$)/.test(path);
+    } catch (e) {
+        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v)(\?|$)/.test(url.toLowerCase());
+    }
+}
+
 function initHlsPlayer(url) {
     videoStorageKey = generateStorageKey(url);
 
+    /* ---- Direct video file (MP4, WebM, etc.) ---- */
+    if (isDirectVideoUrl(url)) {
+        isHlsJsMode = false;
+        showLoader();
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+            renderTracksMenu(); hideLoader(); setupInactivityDetection();
+            restoreVideoProgress(); startProgressSaving();
+        }, {once:true});
+        video.addEventListener('error', () => {
+            displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
+            hideLoader();
+        }, {once:true});
+        return;
+    }
+
+    /* ---- HLS stream (.m3u8) ---- */
     if (Hls.isSupported()) {
         isHlsJsMode = true;
         showLoader();
