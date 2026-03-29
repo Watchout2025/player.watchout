@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Netout Player</title>
+    <title>HLS Player – Double-Tap Skip + Left/Right Hint</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
@@ -414,7 +414,6 @@ const SPEED_OPTIONS = [
    STATE & CONFIG
    ------------------------------------------------------------------------- */
 const urlParams   = new URLSearchParams(window.location.search);
-const hlsUrl      = urlParams.get('url') || 'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
 
 let hlsInstance   = null;
 let isHlsJsMode   = false;
@@ -1085,9 +1084,61 @@ function initHlsPlayer(url) {
 }
 
 /* -------------------------------------------------------------------------
-   START
+   START  –  TV route: /tv/{tmdbId}/S{season}/E{episode}
+             or ?url=  fallback
    ------------------------------------------------------------------------- */
-window.onload = () => initHlsPlayer(hlsUrl);
+async function resolveAndPlay() {
+    /* --- Try TV path: /tv/TMDBID/S1/E1 --- */
+    const tvMatch = window.location.pathname.match(
+        /\/tv\/(\d+)\/S(\d+)\/E(\d+)/i
+    );
+
+    if (tvMatch) {
+        const seriesId     = tvMatch[1];
+        const seasonNumber = tvMatch[2];
+        const episodeNumber= tvMatch[3];
+
+        showLoader();
+
+        const githubJsonUrl =
+            `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${seriesId}/S${seasonNumber}.json`;
+
+        try {
+            const res = await fetch(githubJsonUrl);
+            if (res.ok) {
+                const data   = await res.json();
+                const fileId = data[episodeNumber];
+
+                if (fileId) {
+                    /* fileId is already the full m3u8 URL */
+                    initHlsPlayer(fileId);
+                    return;
+                } else {
+                    displayError(`Episode ${episodeNumber} not found in season data.`);
+                    hideLoader();
+                    return;
+                }
+            } else {
+                displayError(`Could not load season data (HTTP ${res.status}).`);
+                hideLoader();
+                return;
+            }
+        } catch (err) {
+            displayError(`Failed to fetch episode data: ${err.message}`);
+            hideLoader();
+            return;
+        }
+    }
+
+    /* --- Fallback: ?url= query param or hardcoded default --- */
+    const hlsUrl =
+        urlParams.get('url') ||
+        'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
+
+    initHlsPlayer(hlsUrl);
+}
+
+window.onload = resolveAndPlay;
 </script>
 </body>
 </html>
