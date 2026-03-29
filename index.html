@@ -415,6 +415,7 @@ const SPEED_OPTIONS = [
    ------------------------------------------------------------------------- */
 const urlParams   = new URLSearchParams(window.location.search);
 
+let resolvedUrl   = null;   /* set once we know the final HLS URL */
 let hlsInstance   = null;
 let isHlsJsMode   = false;
 let inactivityTimer;
@@ -798,7 +799,7 @@ function saveVideoProgress() {
     if (!video.duration || isNaN(video.duration) || video.duration === Infinity) return;
     if (video.currentTime < 1 || video.currentTime > video.duration - 5) return;
     try {
-        const data = { currentTime: video.currentTime, duration: video.duration, timestamp: Date.now(), url: hlsUrl };
+        const data = { currentTime: video.currentTime, duration: video.duration, timestamp: Date.now(), url: resolvedUrl };
         localStorage.setItem(videoStorageKey, JSON.stringify(data));
     } catch (e) { console.error('save progress error', e); }
 }
@@ -809,7 +810,7 @@ function restoreVideoProgress() {
         const raw = localStorage.getItem(videoStorageKey);
         if (!raw) return;
         const data = JSON.parse(raw);
-        if (data.url !== hlsUrl || data.currentTime <= 1 || data.currentTime >= video.duration - 5) return;
+        if (data.url !== resolvedUrl || data.currentTime <= 1 || data.currentTime >= video.duration - 5) return;
         hasRestoredPosition = true;
         const seek = () => {
             video.currentTime = data.currentTime;
@@ -1030,6 +1031,7 @@ function isDirectVideoUrl(url) {
 }
 
 function initHlsPlayer(url) {
+    resolvedUrl     = url;
     videoStorageKey = generateStorageKey(url);
 
     /* ---- Direct video file (MP4, WebM, etc.) ---- */
