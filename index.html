@@ -694,8 +694,10 @@ function renderTracksMenu() {
         });
     }
 
-    const subTracks = isHlsJsMode ? hlsInstance.subtitleTracks : (video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : []);
-    const curSubIdx = isHlsJsMode ? hlsInstance.subtitleTrack : subTracks.findIndex(t=>t.mode==='showing');
+    // Always read subtitles from native video.textTracks — GitHub-injected <track> elements
+    // live here regardless of whether HLS.js is handling the stream.
+    const subTracks = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
+    const curSubIdx = subTracks.findIndex(t=>t.mode==='showing');
 
     const offLi = document.createElement('li');
     offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx===-1?'font-bold text-white':'text-gray-400'}`;
@@ -709,16 +711,16 @@ function renderTracksMenu() {
         subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
     } else {
         subTracks.forEach((track, i) => {
-            const selected = isHlsJsMode ? (i === curSubIdx) : (track.mode === 'showing');
+            const selected = track.mode === 'showing';
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
-            li.textContent = getDisplayName(track, isHlsJsMode);
+            li.textContent = getDisplayName(track, false);
             li.dataset.index = i;
             li.dataset.type  = 'subtitle';
             li.addEventListener('click', () => handleTrackSelection('subtitle', i));
             subtitleList.appendChild(li);
 
-            if (!isHlsJsMode) track.onchange = renderTracksMenu;
+            track.onchange = renderTracksMenu;
         });
     }
 }
@@ -729,8 +731,8 @@ function handleTrackSelection(type, idx) {
             for (let i=0;i<video.audioTracks.length;i++) video.audioTracks[i].enabled = (i===idx);
         }
     } else if (type === 'subtitle') {
-        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = idx;
-        else if (video.textTracks) {
+        // Always control native textTracks — GitHub SRT tracks are <track> elements, not HLS.js tracks
+        if (video.textTracks) {
             const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
             subs.forEach((t,i) => {
                 if (idx === -1) t.mode = 'disabled';
