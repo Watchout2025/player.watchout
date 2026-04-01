@@ -1212,6 +1212,19 @@ function langLabel(code) {
     return LANG_LABELS[code] || code.toUpperCase();
 }
 
+function srtToVtt(srt) {
+    // Convert SRT subtitle format to WebVTT format (required by HTML5 <track>)
+    let vtt = 'WEBVTT\n\n';
+    vtt += srt
+        .replace(/\r\n/g, '\n').replace(/\r/g, '\n')  // normalize line endings
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2') // fix timestamps: , → .
+        .trim();
+    return vtt;
+}
+
+// Track blob URLs so we can revoke them when reloading
+const _subtitleBlobUrls = [];
+
 async function loadSubtitlesFromGithub(type, id, season, episode) {
     let jsonPath;
     if (type === 'movie') {
@@ -1229,20 +1242,38 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
         const langs = Object.keys(subs);
         if (!langs.length) return;
 
+        // Fetch all SRT files and convert to VTT blob URLs in parallel
+        const trackData = await Promise.all(langs.map(async (lang) => {
+            try {
+                const srtRes = await fetch(subs[lang]);
+                if (!srtRes.ok) return null;
+                const srtText = await srtRes.text();
+                const vttText = srtToVtt(srtText);
+                const blob = new Blob([vttText], { type: 'text/vtt' });
+                const blobUrl = URL.createObjectURL(blob);
+                _subtitleBlobUrls.push(blobUrl);
+                return { lang, blobUrl };
+            } catch (err) {
+                console.warn(`Failed to load subtitle for ${lang}:`, err.message);
+                return null;
+            }
+        }));
+
+        const validTracks = trackData.filter(Boolean);
+        if (!validTracks.length) return;
+
         // Wait until video element is ready to accept tracks
         const inject = () => {
-            // Remove any previously injected github tracks
+            // Revoke old blob URLs and remove previously injected tracks
             Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
 
-            langs.forEach((lang, i) => {
-                const srtUrl = subs[lang];
-                const track  = document.createElement('track');
+            validTracks.forEach(({ lang, blobUrl }) => {
+                const track = document.createElement('track');
                 track.kind    = 'subtitles';
                 track.label   = langLabel(lang);
                 track.srclang = lang;
-                track.src = srtUrl;
+                track.src     = blobUrl;
                 track.setAttribute('data-github', '1');
-                // Default first track on but hidden (mode=hidden loads cues without showing)
                 track.default = false;
                 video.appendChild(track);
             });
