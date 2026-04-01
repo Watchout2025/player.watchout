@@ -1240,7 +1240,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
                 track.kind    = 'subtitles';
                 track.label   = langLabel(lang);
                 track.srclang = lang;
-                track.src = `https://opensub.bingeoutofficial.workers.dev/${srtUrl}`;
+                track.src     = srtUrl;
                 track.setAttribute('data-github', '1');
                 // Default first track on but hidden (mode=hidden loads cues without showing)
                 track.default = false;
