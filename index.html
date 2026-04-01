@@ -1195,9 +1195,7 @@ async function resolveAndPlay() {
 /* -------------------------------------------------------------------------
    SUBTITLES FROM GITHUB subtitles.json
    ------------------------------------------------------------------------- */
-const GITHUB_RAW = 'https://cdn.jsdelivr.net/gh/Watchout2025/api@main';
-const GITHUB_RAW_RE = /^https:\/\/raw\.githubusercontent\.com\/Watchout2025\/api\/refs\/heads\/main\//;
-function toJsDelivr(url) { return url.replace(GITHUB_RAW_RE, 'https://cdn.jsdelivr.net/gh/Watchout2025/api@main'); }
+const GITHUB_RAW = 'https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main';
 
 const LANG_LABELS = {
     eng:'English', hin:'Hindi', ara:'Arabic', fra:'French', spa:'Spanish',
@@ -1242,7 +1240,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
                 track.kind    = 'subtitles';
                 track.label   = langLabel(lang);
                 track.srclang = lang;
-                track.src     = toJsDelivr(srtUrl);
+                track.src     = srtUrl;
                 track.setAttribute('data-github', '1');
                 // Default first track on but hidden (mode=hidden loads cues without showing)
                 track.default = false;
