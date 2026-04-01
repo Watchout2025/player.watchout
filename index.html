@@ -719,7 +719,8 @@ function renderTracksMenu() {
 
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
-            li.textContent = getDisplayName(track, isHlsTrack);
+            // Always use native textTrack properties (.language / .label) for display name
+            li.textContent = getDisplayName(track, false);
             li.dataset.index = i;
             li.dataset.type  = 'subtitle';
             li.dataset.hlsIdx = isHlsTrack ? hlsIdx : '';  // store HLS.js index if applicable
@@ -743,7 +744,8 @@ function handleTrackSelection(type, idx, hlsIdx) {
             subs.forEach(t => t.mode = 'disabled');
         } else if (hlsIdx !== undefined && hlsIdx >= 0) {
             if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
-            subs.forEach(t => t.mode = 'disabled');
+            // Also activate the native textTrack so the browser renders cues
+            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
         } else {
             if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
             subs.forEach((t,i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
@@ -1008,7 +1010,11 @@ function handleKeyboardShortcuts(e) {
         case 'KeyC':
             if (isHlsJsMode && hlsInstance) {
                 const cur = hlsInstance.subtitleTrack;
-                hlsInstance.subtitleTrack = cur === -1 ? 0 : -1;
+                const nextIdx = cur === -1 ? 0 : -1;
+                hlsInstance.subtitleTrack = nextIdx;
+                // Sync native textTracks so cues actually render
+                const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
+                subs.forEach((t,i) => { t.mode = (nextIdx >= 0 && i === nextIdx) ? 'showing' : 'disabled'; });
             } else if (video.textTracks) {
                 const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
                 const showing = subs.some(t=>t.mode==='showing');
@@ -1064,7 +1070,10 @@ function initHlsPlayer(url) {
     if (Hls.isSupported()) {
         isHlsJsMode = true;
         showLoader();
-        const h = new Hls();
+        const h = new Hls({
+            renderTextTracksNatively: true,
+            subtitleDisplay: true,
+        });
         hlsInstance = h;
 
         h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
