@@ -1090,10 +1090,50 @@ function initHlsPlayer(url) {
 }
 
 /* -------------------------------------------------------------------------
-   START  –  TV route: /tv/{tmdbId}/S{season}/E{episode}
+   START  –  Movie route: /movie/{tmdbId}
+             TV route: /tv/{tmdbId}/S{season}/E{episode}
              or ?url=  fallback
    ------------------------------------------------------------------------- */
 async function resolveAndPlay() {
+    /* --- Try Movie path: /movie/TMDBID --- */
+    const movieMatch = window.location.pathname.match(
+        /\/movie\/(\d+)/i
+    );
+
+    if (movieMatch) {
+        const movieId = movieMatch[1];
+
+        showLoader();
+
+        const githubUrl =
+            `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/movie/${movieId}`;
+
+        try {
+            const res = await fetch(githubUrl);
+            if (res.ok) {
+                const m3u8Url = await res.text();
+                const cleanUrl = m3u8Url.trim();
+
+                if (cleanUrl && (cleanUrl.includes('.m3u8') || cleanUrl.includes('http'))) {
+                    initHlsPlayer(cleanUrl);
+                    return;
+                } else {
+                    displayError(`Invalid stream URL received for movie ${movieId}.`);
+                    hideLoader();
+                    return;
+                }
+            } else {
+                displayError(`Could not load movie data (HTTP ${res.status}).`);
+                hideLoader();
+                return;
+            }
+        } catch (err) {
+            displayError(`Failed to fetch movie data: ${err.message}`);
+            hideLoader();
+            return;
+        }
+    }
+
     /* --- Try TV path: /tv/TMDBID/S1/E1 --- */
     const tvMatch = window.location.pathname.match(
         /\/tv\/(\d+)\/S(\d+)\/E(\d+)/i
