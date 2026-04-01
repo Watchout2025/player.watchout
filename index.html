@@ -1112,6 +1112,7 @@ async function resolveAndPlay() {
 
                 if (cleanUrl && (cleanUrl.includes('.m3u8') || cleanUrl.includes('http'))) {
                     initHlsPlayer(cleanUrl);
+                    loadSubtitlesFromGithub('movie', movieId);
                     return;
                 } else {
                     displayError(`Invalid stream URL received for movie ${movieId}.`);
@@ -1154,6 +1155,7 @@ async function resolveAndPlay() {
                 if (fileId) {
                     /* fileId is already the full m3u8 URL */
                     initHlsPlayer(fileId);
+                    loadSubtitlesFromGithub('tv', seriesId, seasonNumber, episodeNumber);
                     return;
                 } else {
                     displayError(`Episode ${episodeNumber} not found in season data.`);
@@ -1178,6 +1180,77 @@ async function resolveAndPlay() {
         'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
 
     initHlsPlayer(hlsUrl);
+}
+
+/* -------------------------------------------------------------------------
+   SUBTITLES FROM GITHUB subtitles.json
+   ------------------------------------------------------------------------- */
+const GITHUB_RAW = 'https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main';
+
+const LANG_LABELS = {
+    eng:'English', hin:'Hindi', ara:'Arabic', fra:'French', spa:'Spanish',
+    por:'Portuguese', rus:'Russian', zho:'Chinese', jpn:'Japanese', kor:'Korean',
+    ger:'German', ita:'Italian', tam:'Tamil', tel:'Telugu', mal:'Malayalam',
+    ben:'Bengali', mar:'Marathi', urd:'Urdu', pol:'Polish', tur:'Turkish',
+    nld:'Dutch', swe:'Swedish', nor:'Norwegian', dan:'Danish', fin:'Finnish',
+    ind:'Indonesian', tha:'Thai', vie:'Vietnamese', ces:'Czech', hun:'Hungarian',
+    ron:'Romanian', bul:'Bulgarian', hrv:'Croatian', srp:'Serbian', slk:'Slovak',
+    ukr:'Ukrainian', heb:'Hebrew', fas:'Persian', msa:'Malay',
+};
+
+function langLabel(code) {
+    return LANG_LABELS[code] || code.toUpperCase();
+}
+
+async function loadSubtitlesFromGithub(type, id, season, episode) {
+    let jsonPath;
+    if (type === 'movie') {
+        jsonPath = `${GITHUB_RAW}/sub/movie/${id}/subtitles.json`;
+    } else {
+        jsonPath = `${GITHUB_RAW}/sub/tv/${id}/${season}/${episode}/subtitles.json`;
+    }
+
+    try {
+        const res = await fetch(jsonPath);
+        if (!res.ok) return; // No subtitles yet — silent fail
+
+        const data = await res.json();
+        const subs = data.subtitles || {};
+        const langs = Object.keys(subs);
+        if (!langs.length) return;
+
+        // Wait until video element is ready to accept tracks
+        const inject = () => {
+            // Remove any previously injected github tracks
+            Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
+
+            langs.forEach((lang, i) => {
+                const srtUrl = subs[lang];
+                const track  = document.createElement('track');
+                track.kind    = 'subtitles';
+                track.label   = langLabel(lang);
+                track.srclang = lang;
+                track.src     = srtUrl;
+                track.setAttribute('data-github', '1');
+                // Default first track on but hidden (mode=hidden loads cues without showing)
+                track.default = false;
+                video.appendChild(track);
+            });
+
+            // Re-render the subtitle menu so new tracks appear
+            renderTracksMenu();
+        };
+
+        if (video.readyState >= 1) {
+            inject();
+        } else {
+            video.addEventListener('loadedmetadata', inject, { once: true });
+        }
+
+    } catch (e) {
+        // Silently ignore — subtitles are optional
+        console.warn('Could not load subtitles.json:', e.message);
+    }
 }
 
 window.onload = resolveAndPlay;
