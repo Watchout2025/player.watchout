@@ -712,33 +712,41 @@ function renderTracksMenu() {
     } else {
         subTracks.forEach((track, i) => {
             const selected = track.mode === 'showing';
+            // Determine if this track is HLS.js-managed: it will have a matching entry in hlsInstance.subtitleTracks
+            const hlsSubTracks = (isHlsJsMode && hlsInstance) ? hlsInstance.subtitleTracks : [];
+            const hlsIdx = hlsSubTracks.findIndex(h => h.name === track.label || h.lang === track.language);
+            const isHlsTrack = hlsIdx !== -1;
+
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
-            li.textContent = getDisplayName(track, false);
+            li.textContent = getDisplayName(track, isHlsTrack);
             li.dataset.index = i;
             li.dataset.type  = 'subtitle';
-            li.addEventListener('click', () => handleTrackSelection('subtitle', i));
+            li.dataset.hlsIdx = isHlsTrack ? hlsIdx : '';  // store HLS.js index if applicable
+            li.addEventListener('click', () => handleTrackSelection('subtitle', i, isHlsTrack ? hlsIdx : -2));
             subtitleList.appendChild(li);
 
             track.onchange = renderTracksMenu;
         });
     }
 }
-function handleTrackSelection(type, idx) {
+function handleTrackSelection(type, idx, hlsIdx) {
     if (type === 'audio') {
         if (isHlsJsMode && hlsInstance) hlsInstance.audioTrack = idx;
         else if (video.audioTracks) {
             for (let i=0;i<video.audioTracks.length;i++) video.audioTracks[i].enabled = (i===idx);
         }
     } else if (type === 'subtitle') {
-        // Always control native textTracks — GitHub SRT tracks are <track> elements, not HLS.js tracks
-        if (video.textTracks) {
-            const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
-            subs.forEach((t,i) => {
-                if (idx === -1) t.mode = 'disabled';
-                else if (i === idx) t.mode = 'showing';
-                else t.mode = 'disabled';
-            });
+        const subs = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
+        if (idx === -1) {
+            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
+            subs.forEach(t => t.mode = 'disabled');
+        } else if (hlsIdx !== undefined && hlsIdx >= 0) {
+            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
+            subs.forEach(t => t.mode = 'disabled');
+        } else {
+            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
+            subs.forEach((t,i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
         }
     }
     audioSubtitleMenu.classList.add('hidden');
@@ -1187,7 +1195,9 @@ async function resolveAndPlay() {
 /* -------------------------------------------------------------------------
    SUBTITLES FROM GITHUB subtitles.json
    ------------------------------------------------------------------------- */
-const GITHUB_RAW = 'https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main';
+const GITHUB_RAW = 'https://cdn.jsdelivr.net/gh/Watchout2025/api@main';
+const GITHUB_RAW_RE = /^https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/;
+function toJsDelivr(url) { return url.replace(GITHUB_RAW_RE, 'https://cdn.jsdelivr.net/gh/Watchout2025/api@main'); }
 
 const LANG_LABELS = {
     eng:'English', hin:'Hindi', ara:'Arabic', fra:'French', spa:'Spanish',
@@ -1232,7 +1242,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
                 track.kind    = 'subtitles';
                 track.label   = langLabel(lang);
                 track.srclang = lang;
-                track.src     = srtUrl;
+                track.src     = toJsDelivr(srtUrl);
                 track.setAttribute('data-github', '1');
                 // Default first track on but hidden (mode=hidden loads cues without showing)
                 track.default = false;
