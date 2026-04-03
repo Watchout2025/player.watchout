@@ -62,7 +62,7 @@
 <body>
 
 <div id="video-container" class="relative">
-    <video crossorigin="anonymous" id="video" class="w-full h-full object-contain"></video>
+    <video crossorigin="anonymous" id="video" class="w-full h-full object-contain" autoplay playsinline></video>
 
     <!-- Left / Right skip hint -->
     <div id="skip-hint" class="text-white"></div>
@@ -1058,6 +1058,7 @@ function initHlsPlayer(url) {
         video.addEventListener('loadedmetadata', () => {
             renderTracksMenu(); hideLoader(); setupInactivityDetection();
             restoreVideoProgress(); startProgressSaving();
+            video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
             displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
@@ -1087,7 +1088,7 @@ function initHlsPlayer(url) {
         h.attachMedia(video);
 
         video.addEventListener('loadedmetadata', () => restoreVideoProgress(), {once:true});
-        video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); }, {once:true});
+        video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); video.play().catch(() => {}); }, {once:true});
     }
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         isHlsJsMode = false;
@@ -1096,6 +1097,7 @@ function initHlsPlayer(url) {
         video.addEventListener('loadedmetadata', () => {
             renderTracksMenu(); hideLoader(); setupInactivityDetection();
             restoreVideoProgress(); startProgressSaving();
+            video.play().catch(() => {});
         }, {once:true});
     }
     else {
