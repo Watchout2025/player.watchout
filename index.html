@@ -616,11 +616,34 @@ function endSeeking(e) {
 /* -------------------------------------------------------------------------
    FULLSCREEN
    ------------------------------------------------------------------------- */
+function isMobileDevice() {
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+           (navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
+}
+
+function lockLandscape() {
+    try {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {});
+        }
+    } catch (e) {}
+}
+
+function unlockOrientation() {
+    try {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    } catch (e) {}
+}
+
 function toggleFullscreen() {
     if (document.fullscreenElement) {
         document.exitFullscreen();
+        if (isMobileDevice()) unlockOrientation();
     } else {
         videoContainer.requestFullscreen({navigationUI:'hide'})
+            .then(() => { if (isMobileDevice()) lockLandscape(); })
             .catch(err => displayError('Fullscreen error: ' + err.message));
     }
 }
@@ -628,6 +651,8 @@ function updateFullscreenIcon() {
     const inFs = !!document.fullscreenElement;
     fullscreenEnterIcon.classList.toggle('hidden', inFs);
     fullscreenExitIcon.classList.toggle('hidden', !inFs);
+    // Also handle orientation if fullscreen was exited via browser UI (e.g. back gesture)
+    if (!inFs && isMobileDevice()) unlockOrientation();
 }
 
 /* -------------------------------------------------------------------------
