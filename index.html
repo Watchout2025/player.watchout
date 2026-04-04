@@ -113,7 +113,7 @@
           font-weight: 600;
         }
         .report-modal {
-          position: fixed;
+          position: absolute;
           inset: 0;
           background: rgba(0, 0, 0, 0.75);
           display: flex;
@@ -476,34 +476,34 @@
 
     <div id="error-message"
          class="absolute top-0 right-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30"></div>
-</div>
 
-<!-- Report Issue Modal -->
-<div class="report-modal" id="reportModal">
-  <div class="report-modal-box">
-    <div class="report-modal-header">
-      <h2 class="report-modal-title">Report an Issue</h2>
-      <button class="report-close-btn" onclick="closeReportModal()">&times;</button>
+    <!-- Report Issue Modal (inside video-container so it works in fullscreen) -->
+    <div class="report-modal" id="reportModal">
+      <div class="report-modal-box">
+        <div class="report-modal-header">
+          <h2 class="report-modal-title">Report an Issue</h2>
+          <button class="report-close-btn" onclick="closeReportModal()">&times;</button>
+        </div>
+        <div class="report-modal-body">
+          <label for="issueType">Issue Type</label>
+          <select id="issueType">
+            <option value="">Select an issue</option>
+            <option value="video">Video not playing</option>
+            <option value="audio">Audio issue</option>
+            <option value="subtitle">Subtitle issue</option>
+            <option value="buffer">Buffering or slow playback</option>
+            <option value="other">Other</option>
+          </select>
+          <label for="issueDesc">Description (optional)</label>
+          <textarea id="issueDesc" placeholder="Describe the problem"></textarea>
+        </div>
+        <div class="report-modal-footer">
+          <button class="report-submit-btn" id="submitBtn" onclick="submitIssue()" disabled>
+            Submit
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="report-modal-body">
-      <label for="issueType">Issue Type</label>
-      <select id="issueType">
-        <option value="">Select an issue</option>
-        <option value="video">Video not playing</option>
-        <option value="audio">Audio issue</option>
-        <option value="subtitle">Subtitle issue</option>
-        <option value="buffer">Buffering or slow playback</option>
-        <option value="other">Other</option>
-      </select>
-      <label for="issueDesc">Description (optional)</label>
-      <textarea id="issueDesc" placeholder="Describe the problem"></textarea>
-    </div>
-    <div class="report-modal-footer">
-      <button class="report-submit-btn" id="submitBtn" onclick="submitIssue()" disabled>
-        Submit
-      </button>
-    </div>
-  </div>
 </div>
 
 <script>
