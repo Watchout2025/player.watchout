@@ -38,10 +38,11 @@
             #back-button, #report-button{display:none;}
         }
         
-        #progress-indicator,#seek-thumb{background:#E50914}
+        #progress-indicator,#seek-thumb{background:rgb(225,0,0)}
         #center-controls-mobile-only{width: 50vw;justify-content:center;}
-        #seek-bar{height:.25rem}
-        #seek-thumb{height:1rem;width:1rem}
+        #seek-bar{height:3px;transition:height 0.15s ease}
+        #seek-bar:hover{height:6px}
+        #seek-thumb{height:1rem;width:1rem;transform:translateY(-50%) scale(1)}
         #video-container{width:100vw;height:100vh;background:#000}
         .controls-visible{opacity:1;pointer-events:auto}
         .controls-hidden{opacity:0;pointer-events:none}
@@ -130,10 +131,7 @@
         /* ---- Report Issue Modal ---- */
         .report-issue-btn {
           padding: 12px 20px;
-          background: #e50914;
-          border: none;
-          color: #fff;
-          font-size: 15px;
+          background: rgb(225,0,0);
           cursor: pointer;
           border-radius: 4px;
           font-weight: 600;
@@ -218,7 +216,7 @@
         }
         .report-modal-body select:focus,
         .report-modal-body textarea:focus {
-          border-color: #e50914;
+          border-color: rgb(225,0,0);
         }
         .report-modal-body textarea {
           resize: none;
@@ -231,10 +229,7 @@
         }
         .report-submit-btn {
           padding: 10px 18px;
-          background: #e50914;
-          border: none;
-          color: #fff;
-          font-size: 14px;
+          background: rgb(225,0,0);
           cursor: pointer;
           border-radius: 4px;
           font-weight: 600;
@@ -334,7 +329,7 @@
                          class="absolute inset-y-0 left-0 rounded-full transition-all duration-100"
                          style="width:0%"></div>
                     <div id="seek-thumb"
-                         class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150 transform scale-0 group-hover:scale-100"
+                         class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150"
                          style="left:0%"></div>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
@@ -397,11 +392,12 @@
                             <div id="volume-slider-track"
                                  class="relative w-2 h-24 bg-white/30 rounded-full cursor-pointer">
                                 <div id="volume-level"
-                                     class="absolute bottom-0 left-0 right-0 bg-red-600 rounded-full"
+                                     class="absolute bottom-0 left-0 right-0 rounded-full"
+                                     style="background:rgb(225,0,0)"
                                      style="height:100%"></div>
                                 <div id="volume-thumb-control"
-                                     class="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-red-600 rounded-full transition-transform duration-100"
-                                     style="bottom:0"></div>
+                                     class="absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full transition-transform duration-100"
+                                     style="bottom:0;background:rgb(225,0,0)"></div>
                             </div>
                         </div>
                         <button id="mute-button"
