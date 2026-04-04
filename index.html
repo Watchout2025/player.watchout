@@ -1450,10 +1450,11 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const ep     = epRes.ok     ? await epRes.json()     : {};
             const seriesName = series.name || '';
             const epName     = ep.name    || '';
-            const label      = `S${String(season).padStart(2,'0')} E${String(episode).padStart(2,'0')}`;
-            document.getElementById('title-main-text').textContent = seriesName;
-            document.getElementById('title-sub-text').textContent  = epName ? `${label} · ${epName}` : label;
-            document.title = seriesName ? `${seriesName} – ${label}` : document.title;
+            const label      = `S${season}E${episode}`;
+            const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
+            document.getElementById('title-main-text').textContent = fullTitle;
+            document.getElementById('title-sub-text').textContent  = '';
+            document.title = fullTitle || document.title;
         }
     } catch (e) {
         /* Silently ignore — title is non-critical */
