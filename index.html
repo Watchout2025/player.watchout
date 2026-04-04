@@ -53,6 +53,26 @@
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
+        /* ---- Netflix-style subtitles ---- */
+        ::cue {
+            background: transparent;
+            color: #fff;
+            font-family: 'NetflixSans', sans-serif;
+            font-size: 1.1em;
+            font-weight: 400;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7);
+            line-height: 1.4;
+        }
+        video::-webkit-media-text-track-display {
+            overflow: visible !important;
+        }
+        video::cue {
+            background: transparent;
+        }
+        #video {
+            --subtitle-bottom-offset: 80px;
+        }
+
         /* ---- Left / Right skip hints ---- */
         #skip-hint{
             position:fixed;top:50%;transform:translateY(-50%);
@@ -233,7 +253,7 @@
 <body>
 
 <div id="video-container" class="relative">
-    <video crossorigin="anonymous" id="video" class="w-full h-full object-contain" autoplay playsinline></video>
+    <video crossorigin="anonymous" id="video" class="w-full h-full object-contain" autoplay playsinline style="--cue-bottom:80px"></video>
 
     <!-- Left / Right skip hint -->
     <div id="skip-hint" class="text-white"></div>
@@ -1490,11 +1510,17 @@ function langLabel(code) {
 
 function srtToVtt(srt) {
     // Convert SRT subtitle format to WebVTT format (required by HTML5 <track>)
+    // line:85% pushes cues above the controls bar, align:center keeps them centred
     let vtt = 'WEBVTT\n\n';
-    vtt += srt
-        .replace(/\r\n/g, '\n').replace(/\r/g, '\n')  // normalize line endings
-        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2') // fix timestamps: , → .
+    const body = srt
+        .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
         .trim();
+    // Inject position cue settings on every timestamp line
+    vtt += body.replace(
+        /(\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3})/g,
+        '$1 line:85% position:50% align:center'
+    );
     return vtt;
 }
 
