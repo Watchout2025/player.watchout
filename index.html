@@ -42,7 +42,7 @@
         #center-controls-mobile-only{width: 50vw;justify-content:center;}
         #seek-bar{height:3px;transition:height 0.15s ease}
         #seek-bar:hover{height:6px}
-        #seek-thumb{height:1rem;width:1rem;transform:translateY(-50%) scale(1)}
+        #seek-thumb{height:12px;width:12px;transform:translateY(-50%) scale(1)}
         #video-container{width:100vw;height:100vh;background:#000}
         .controls-visible{opacity:1;pointer-events:auto}
         .controls-hidden{opacity:0;pointer-events:none}
@@ -321,12 +321,12 @@
             <!-- Timeline -->
             <div id="timeline-row" class="flex items-center space-x-2 md:space-x-4 w-full">
                 <div id="seek-bar"
-                     class="relative flex-grow bg-white/30 rounded-full cursor-pointer group">
+                     class="relative flex-grow bg-white/30 cursor-pointer group">
                     <div id="buffer-indicator"
-                         class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100"
+                         class="absolute inset-y-0 left-0 bg-white/50 transition-all duration-100"
                          style="width:0%"></div>
                     <div id="progress-indicator"
-                         class="absolute inset-y-0 left-0 rounded-full transition-all duration-100"
+                         class="absolute inset-y-0 left-0 transition-all duration-100"
                          style="width:0%"></div>
                     <div id="seek-thumb"
                          class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150"
