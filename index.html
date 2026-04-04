@@ -1438,9 +1438,8 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const res = await fetch(`${TMDB_PROXY}/movie/${id}`);
             if (!res.ok) return;
             const data = await res.json();
-            const year = data.release_date ? data.release_date.slice(0, 4) : '';
             document.getElementById('title-main-text').textContent = data.title || '';
-            document.getElementById('title-sub-text').textContent = year ? `${year}` : '';
+            document.getElementById('title-sub-text').textContent = '';
             document.title = data.title || document.title;
         } else if (type === 'tv') {
             const [seriesRes, epRes] = await Promise.all([
