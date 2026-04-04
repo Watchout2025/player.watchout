@@ -22,15 +22,13 @@
         .bottom-control-button:hover svg{transform:scale(1.2)}
         #timeline-row{display:flex;width:100%;padding:0 20px;box-sizing:border-box;gap:1rem;align-items:center;position:relative}
         #bottom-controls-row{display:flex;width:100%;padding:12px;padding-top:4px;gap:8px;box-sizing:border-box;position:relative;margin-top:0}
-        .bottom-control-button{background:transparent;border-radius:.2rem;border:none;color:#fff;cursor:pointer;padding:.625rem;margin:0;position:relative;transition:transform 150ms;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+        .bottom-control-button{background:transparent;border-radius:.2rem;border:none;color:#fff;cursor:pointer;padding:0;position:relative;transition:transform 150ms;width:3rem;height:3rem;padding:.625rem !important}
         #mobile-skip-backward-button{margin-right:calc(1.5rem*calc(1-var(--tw-space-x-reverse)))}
         #mobile-skip-forward-button{margin-left:calc(1.5rem*calc(1-var(--tw-space-x-reverse)))}
         @media(min-width:1000px){
             #mobile-skip-backward-button{margin-right:calc(2.5rem*calc(1-var(--tw-space-x-reverse)))}
             #mobile-skip-forward-button{margin-left:calc(2.5rem*calc(1-var(--tw-space-x-reverse)))}
-            .bottom-control-button{width:2.2rem;height:2.2rem;padding:0;margin:0;}
-            #left-controls{gap:1.5rem;}
-            #right-controls{gap:1.5rem;}
+            .bottom-control-button{width:3rem;height:3rem}
         }
         @media(max-width:1000px){
             #center-controls-mobile-only{width: 50vw;justify-content:space-between!important;}
@@ -44,7 +42,7 @@
         #center-controls-mobile-only{width: 50vw;justify-content:center;}
         #seek-bar{height:3px;transition:height 0.15s ease}
         #seek-bar:hover{height:6px}
-        #seek-thumb{height:12px;width:12px;transform:translateY(-50%) scale(1)}
+        #seek-thumb{height:1rem;width:1rem;transform:translateY(-50%) scale(1)}
         #video-container{width:100vw;height:100vh;background:#000}
         .controls-visible{opacity:1;pointer-events:auto}
         .controls-hidden{opacity:0;pointer-events:none}
@@ -323,12 +321,12 @@
             <!-- Timeline -->
             <div id="timeline-row" class="flex items-center space-x-2 md:space-x-4 w-full">
                 <div id="seek-bar"
-                     class="relative flex-grow bg-white/30 cursor-pointer group">
+                     class="relative flex-grow bg-white/30 rounded-full cursor-pointer group">
                     <div id="buffer-indicator"
-                         class="absolute inset-y-0 left-0 bg-white/50 transition-all duration-100"
+                         class="absolute inset-y-0 left-0 bg-white/50 rounded-full transition-all duration-100"
                          style="width:0%"></div>
                     <div id="progress-indicator"
-                         class="absolute inset-y-0 left-0 transition-all duration-100"
+                         class="absolute inset-y-0 left-0 rounded-full transition-all duration-100"
                          style="width:0%"></div>
                     <div id="seek-thumb"
                          class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150"
@@ -347,10 +345,10 @@
                     <span class="title-main" id="title-main-text"></span>
                     <span class="title-sub" id="title-sub-text"></span>
                 </div>
-                <div id="left-controls" class="flex items-center">
+                <div class="flex items-center space-x-1 md:space-x-2">
                     <!-- Play / Pause -->
                     <button id="custom-play-button"
-                            class="bottom-control-button focus:outline-none">
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
                         <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                              aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
                             <path fill="currentColor"
@@ -366,7 +364,7 @@
 
                     <!-- BACK 10s (desktop) -->
                     <button id="skip-backward-button"
-                            class="bottom-control-button focus:outline-none">
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                              aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full"
                              viewBox="0 0 24 24" data-icon="Back10Medium">
@@ -378,7 +376,7 @@
 
                     <!-- FORWARD 10s -->
                     <button id="skip-forward-button"
-                            class="bottom-control-button focus:outline-none">
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                              aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
                             <path fill="currentColor" fill-rule="evenodd"
@@ -388,7 +386,7 @@
                     </button>
 
                     <!-- Volume -->
-                    <div id="volume-control-wrapper" class="relative flex items-center">
+                    <div id="volume-control-wrapper" class="relative flex items-center h-10 md:h-12">
                         <div id="volume-slider-container"
                              class="absolute bottom-12 left-1/2 -translate-x-1/2 p-3 bg-black/80 rounded-lg shadow-2xl hidden transition-all duration-200">
                             <div id="volume-slider-track"
@@ -403,7 +401,7 @@
                             </div>
                         </div>
                         <button id="mute-button"
-                                class="bottom-control-button cursor-pointer focus:outline-none z-30">
+                                class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none z-30">
                             <svg id="volume-on-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                                  aria-hidden="true" class="text-white hidden w-6 h-6 md:w-full md:h-full"
                                  viewBox="0 0 24 24">
@@ -418,11 +416,11 @@
                     </div>
                 </div>
 
-                <div id="right-controls" class="flex items-center relative">
+                <div class="flex items-center space-x-1 md:space-x-2 relative">
                     <!-- Audio & Subtitles -->
                     <div class="relative" id="audio-subtitle-wrapper">
                         <button id="audio-subtitle-toggle"
-                                class="bottom-control-button cursor-pointer focus:outline-none"
+                                class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                                 title="Audio & Subtitles">
                             <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                                  aria-hidden="true" class="w-6 h-6 md:w-full md:h-full" viewBox="0 0 24 24">
@@ -459,7 +457,7 @@
 
                     <!-- PLAYBACK SPEED -->
                     <button id="speed-button"
-                            class="bottom-control-button cursor-pointer focus:outline-none"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none"
                             title="Playback speed">
                         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
                              aria-hidden="true" class="w-6 h-6 md:w-full md:h-full"
@@ -477,7 +475,7 @@
 
                     <!-- Fullscreen -->
                     <button id="fullscreen-button"
-                            class="bottom-control-button cursor-pointer focus:outline-none">
+                            class="bottom-control-button text-white flex items-center justify-center md:h-12 md:w-12 flex-shrink-0 cursor-pointer focus:outline-none">
                         <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"
                              fill="none" aria-hidden="true" class="text-white w-6 h-6 md:w-full md:h-full"
                              viewBox="0 0 24 24">
