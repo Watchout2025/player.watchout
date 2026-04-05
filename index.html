@@ -1118,6 +1118,14 @@ function startProgressSaving() {
     video.addEventListener('ended', clearVideoProgress);
     window.addEventListener('beforeunload', saveVideoProgress);
 }
+function stopProgressSaving() {
+    clearInterval(saveProgressInterval);
+    saveProgressInterval = null;
+    video.removeEventListener('pause', saveVideoProgress);
+    video.removeEventListener('seeking', saveVideoProgress);
+    video.removeEventListener('ended', clearVideoProgress);
+    window.removeEventListener('beforeunload', saveVideoProgress);
+}
 function getMediaInfoFromUrl() {
     const path = window.location.pathname;
 
@@ -1369,13 +1377,26 @@ function isDirectVideoUrl(url) {
 }
 
 function initHlsPlayer(url) {
+    // Flush progress for the current episode before switching.
+    // Must happen before resolvedUrl / videoStorageKey are overwritten.
+    saveVideoProgress();
+    if (saveProgressInterval) {
+        clearInterval(saveProgressInterval);
+        saveProgressInterval = null;
+    }
+
     // Tear down any existing HLS instance cleanly before starting a new one.
     // This prevents the old instance from firing fatal error events mid-swap.
+    stopProgressSaving();
+    hasRestoredPosition = false;
     if (hlsInstance) {
         hlsInstance.destroy();
         hlsInstance = null;
     }
     errorMessageDiv.classList.add('hidden');
+
+    // Reset per-episode progress state so the new episode starts fresh.
+    hasRestoredPosition = false;
 
     resolvedUrl     = url;
     videoStorageKey = generateStorageKey(url);
