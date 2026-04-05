@@ -1356,6 +1356,14 @@ function isDirectVideoUrl(url) {
 }
 
 function initHlsPlayer(url) {
+    // Tear down any existing HLS instance cleanly before starting a new one.
+    // This prevents the old instance from firing fatal error events mid-swap.
+    if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+    }
+    errorMessageDiv.classList.add('hidden');
+
     resolvedUrl     = url;
     videoStorageKey = generateStorageKey(url);
 
