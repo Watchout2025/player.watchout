@@ -1157,7 +1157,10 @@ function postTimeUpdateToParent() {
 /* -------------------------------------------------------------------------
    INACTIVITY & GLOBAL EVENT BINDINGS
    ------------------------------------------------------------------------- */
-function setupInactivityDetection() {
+/* -------------------------------------------------------------------------
+   ONE-TIME UI CONTROL BINDINGS  –  called once on page load only
+   ------------------------------------------------------------------------- */
+function setupUIControls() {
     const container = videoContainer;
     ['mousemove','mousedown','touchstart','touchend'].forEach(ev => container.addEventListener(ev, resetInactivityTimer, ev.startsWith('touch') ? {passive:true} : false));
 
@@ -1181,21 +1184,6 @@ function setupInactivityDetection() {
     mobileSkipForwardButton.addEventListener('click', handleSkipForward);
     muteButton.addEventListener('click', toggleMute);
     audioSubtitleToggle.addEventListener('click', e => { e.stopPropagation(); toggleAudioSubtitleMenu(); });
-
-    // Next Episode button — only shown on TV routes
-    const nextEpisodeButton = document.getElementById('next-episode-button');
-    const tvMatch = window.location.pathname.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
-    if (tvMatch) {
-        nextEpisodeButton.classList.remove('hidden');
-        nextEpisodeButton.addEventListener('click', () => {
-            const seriesId      = tvMatch[1];
-            const seasonNumber  = Number(tvMatch[2]);
-            const nextEpisode   = Number(tvMatch[3]) + 1;
-            playEpisode(seriesId, seasonNumber, nextEpisode);
-        });
-    } else {
-        nextEpisodeButton.classList.add('hidden');
-    }
 
     seekBar.addEventListener('mousedown', startSeeking);
     seekBar.addEventListener('touchstart', startSeeking, {passive:true});
@@ -1233,10 +1221,35 @@ function setupInactivityDetection() {
         hideLoader();
     });
 
+    // Next Episode button — only shown on TV routes, re-evaluated on each episode change
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    nextEpisodeButton.addEventListener('click', () => {
+        const tvMatch = window.location.pathname.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
+        if (!tvMatch) return;
+        playEpisode(tvMatch[1], Number(tvMatch[2]), Number(tvMatch[3]) + 1);
+    });
+
+    updateNextEpisodeButtonVisibility();
+}
+
+/* -------------------------------------------------------------------------
+   NEXT EPISODE BUTTON VISIBILITY  –  called on each episode change
+   ------------------------------------------------------------------------- */
+function updateNextEpisodeButtonVisibility() {
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const isTv = /\/tv\/(\d+)\/S(\d+)\/E(\d+)/i.test(window.location.pathname);
+    nextEpisodeButton.classList.toggle('hidden', !isTv);
+}
+
+/* -------------------------------------------------------------------------
+   PER-PLAYBACK SETUP  –  called each time a new stream starts
+   ------------------------------------------------------------------------- */
+function setupInactivityDetection() {
     if (!isHlsJsMode && video.audioTracks) video.audioTracks.addEventListener('change', renderTracksMenu);
 
     lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
     updateProgress(); updateBufferProgress(); updateVolumeSlider(); updateFullscreenIcon();
+    updateNextEpisodeButtonVisibility();
 
     if (video.paused || video.ended) {
         showControls();
@@ -1665,7 +1678,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
     }
 }
 
-window.onload = resolveAndPlay;
+window.onload = () => { setupUIControls(); resolveAndPlay(); };
 
 /* -------------------------------------------------------------------------
    REPORT ISSUE MODAL
