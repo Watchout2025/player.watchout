@@ -1368,97 +1368,92 @@ function initHlsPlayer(url) {
 }
 
 /* -------------------------------------------------------------------------
-   START  –  Movie route: /movie/{tmdbId}
-             TV route: /tv/{tmdbId}/S{season}/E{episode}
-             or ?url=  fallback
+   PLAY MOVIE  –  /movie/{tmdbId}
+   ------------------------------------------------------------------------- */
+async function playMovie(movieId) {
+    showLoader();
+
+    const githubUrl =
+        `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/movie/${movieId}`;
+
+    try {
+        const res = await fetch(githubUrl);
+        if (!res.ok) {
+            displayError(`Could not load movie data (HTTP ${res.status}).`);
+            hideLoader();
+            return;
+        }
+
+        const cleanUrl = (await res.text()).trim();
+
+        if (cleanUrl && (cleanUrl.includes('.m3u8') || cleanUrl.includes('http'))) {
+            initHlsPlayer(cleanUrl);
+            loadSubtitlesFromGithub('movie', movieId);
+            fetchAndSetTitle('movie', movieId);
+        } else {
+            displayError(`Invalid stream URL received for movie ${movieId}.`);
+            hideLoader();
+        }
+    } catch (err) {
+        displayError(`Failed to fetch movie data: ${err.message}`);
+        hideLoader();
+    }
+}
+
+/* -------------------------------------------------------------------------
+   PLAY EPISODE  –  /tv/{tmdbId}/S{season}/E{episode}
+   ------------------------------------------------------------------------- */
+async function playEpisode(seriesId, seasonNumber, episodeNumber) {
+    showLoader();
+
+    const githubJsonUrl =
+        `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${seriesId}/S${seasonNumber}.json`;
+
+    try {
+        const res = await fetch(githubJsonUrl);
+        if (!res.ok) {
+            displayError(`Could not load season data (HTTP ${res.status}).`);
+            hideLoader();
+            return;
+        }
+
+        const data   = await res.json();
+        const fileId = data[episodeNumber];
+
+        if (fileId) {
+            initHlsPlayer(fileId);
+            loadSubtitlesFromGithub('tv', seriesId, seasonNumber, episodeNumber);
+            fetchAndSetTitle('tv', seriesId, seasonNumber, episodeNumber);
+        } else {
+            displayError(`Episode ${episodeNumber} not found in season data.`);
+            hideLoader();
+        }
+    } catch (err) {
+        displayError(`Failed to fetch episode data: ${err.message}`);
+        hideLoader();
+    }
+}
+
+/* -------------------------------------------------------------------------
+   START  –  Route dispatcher
+             Movie:    /movie/{tmdbId}
+             TV:       /tv/{tmdbId}/S{season}/E{episode}
+             Fallback: ?url=  or hardcoded default
    ------------------------------------------------------------------------- */
 async function resolveAndPlay() {
-    /* --- Try Movie path: /movie/TMDBID --- */
-    const movieMatch = window.location.pathname.match(
-        /\/movie\/(\d+)/i
-    );
+    const path = window.location.pathname;
 
+    const movieMatch = path.match(/\/movie\/(\d+)/i);
     if (movieMatch) {
-        const movieId = movieMatch[1];
-
-        showLoader();
-
-        const githubUrl =
-            `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/movie/${movieId}`;
-
-        try {
-            const res = await fetch(githubUrl);
-            if (res.ok) {
-                const m3u8Url = await res.text();
-                const cleanUrl = m3u8Url.trim();
-
-                if (cleanUrl && (cleanUrl.includes('.m3u8') || cleanUrl.includes('http'))) {
-                    initHlsPlayer(cleanUrl);
-                    loadSubtitlesFromGithub('movie', movieId);
-                    fetchAndSetTitle('movie', movieId);
-                    return;
-                } else {
-                    displayError(`Invalid stream URL received for movie ${movieId}.`);
-                    hideLoader();
-                    return;
-                }
-            } else {
-                displayError(`Could not load movie data (HTTP ${res.status}).`);
-                hideLoader();
-                return;
-            }
-        } catch (err) {
-            displayError(`Failed to fetch movie data: ${err.message}`);
-            hideLoader();
-            return;
-        }
+        return playMovie(movieMatch[1]);
     }
 
-    /* --- Try TV path: /tv/TMDBID/S1/E1 --- */
-    const tvMatch = window.location.pathname.match(
-        /\/tv\/(\d+)\/S(\d+)\/E(\d+)/i
-    );
-
+    const tvMatch = path.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
     if (tvMatch) {
-        const seriesId     = tvMatch[1];
-        const seasonNumber = tvMatch[2];
-        const episodeNumber= tvMatch[3];
-
-        showLoader();
-
-        const githubJsonUrl =
-            `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${seriesId}/S${seasonNumber}.json`;
-
-        try {
-            const res = await fetch(githubJsonUrl);
-            if (res.ok) {
-                const data   = await res.json();
-                const fileId = data[episodeNumber];
-
-                if (fileId) {
-                    /* fileId is already the full m3u8 URL */
-                    initHlsPlayer(fileId);
-                    loadSubtitlesFromGithub('tv', seriesId, seasonNumber, episodeNumber);
-                    fetchAndSetTitle('tv', seriesId, seasonNumber, episodeNumber);
-                    return;
-                } else {
-                    displayError(`Episode ${episodeNumber} not found in season data.`);
-                    hideLoader();
-                    return;
-                }
-            } else {
-                displayError(`Could not load season data (HTTP ${res.status}).`);
-                hideLoader();
-                return;
-            }
-        } catch (err) {
-            displayError(`Failed to fetch episode data: ${err.message}`);
-            hideLoader();
-            return;
-        }
+        return playEpisode(tvMatch[1], tvMatch[2], tvMatch[3]);
     }
 
-    /* --- Fallback: ?url= query param or hardcoded default --- */
+    /* Fallback: ?url= query param or hardcoded default */
     const hlsUrl =
         urlParams.get('url') ||
         'https://vidmmo.com/hls/ZDBtrL1WMPQipj3EubEdG6tAKeYJ0Nt3/master.m3u8';
