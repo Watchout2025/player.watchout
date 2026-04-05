@@ -1110,12 +1110,30 @@ function startProgressSaving() {
 }
 function postTimeUpdateToParent() {
     if (window.parent !== window) {
-        window.parent.postMessage({
-            event: 'videoTimeUpdate',
-            currentTime: video.currentTime,
-            duration: video.duration,
-            paused: video.paused
-        }, '*');
+        const parts = window.location.pathname.split('/').filter(Boolean);
+
+        const type = parts[0] || null;
+        const id   = parts[1] || null;
+
+        const currentTime = video.currentTime;
+        const duration    = video.duration || 0;
+
+        const message = {
+            event:     'videoTimeUpdate',
+            id, type,
+            timestamp: currentTime,
+            duration,
+            progress:  duration > 0 ? Math.round((currentTime / duration) * 100) : 0,
+            paused:    video.paused
+        };
+
+        // Only include season/episode for TV
+        if (type === 'tv') {
+            message.season  = parts[2] ? Number(parts[2]) : null;
+            message.episode = parts[3] ? Number(parts[3]) : null;
+        }
+
+        window.parent.postMessage(message, '*');
     }
 }
 
