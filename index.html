@@ -1110,13 +1110,38 @@ function startProgressSaving() {
     video.addEventListener('ended', clearVideoProgress);
     window.addEventListener('beforeunload', saveVideoProgress);
 }
+function getMediaInfoFromUrl() {
+    const path = window.location.pathname;
+
+    const tvMatch = path.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
+    if (tvMatch) {
+        return {
+            mediaType:     'tv',
+            contentId:     tvMatch[1],
+            seasonNumber:  Number(tvMatch[2]),
+            episodeNumber: Number(tvMatch[3]),
+        };
+    }
+
+    const movieMatch = path.match(/\/movie\/(\d+)/i);
+    if (movieMatch) {
+        return {
+            mediaType: 'movie',
+            contentId: movieMatch[1],
+        };
+    }
+
+    return { mediaType: null, contentId: null };
+}
+
 function postTimeUpdateToParent() {
     if (window.parent !== window) {
         window.parent.postMessage({
             event: 'videoTimeUpdate',
             currentTime: video.currentTime,
             duration: video.duration,
-            paused: video.paused
+            paused: video.paused,
+            ...getMediaInfoFromUrl(),
         }, '*');
     }
 }
