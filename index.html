@@ -429,6 +429,14 @@
                 </div>
 
                 <div id="right-controlbuttons" class="flex items-center space-x-1 md:space-x-2 relative">
+                    <!-- Next Episode -->
+                    <button id="next-episode-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none"
+                            title="Next Episode">
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="w-6 h-6 md:w-full md:h-full">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M22 3H20V21H22V3ZM4.28615 3.61729C3.28674 3.00228 2 3.7213 2 4.89478V19.1052C2 20.2787 3.28674 20.9977 4.28615 20.3827L15.8321 13.2775C16.7839 12.6918 16.7839 11.3082 15.8321 10.7225L4.28615 3.61729ZM4 18.2104V5.78956L14.092 12L4 18.2104Z" fill="currentColor"/>
+                        </svg>
+                    </button>
                     <!-- Audio & Subtitles -->
                     <div class="relative" id="audio-subtitle-wrapper">
                         <button id="audio-subtitle-toggle"
@@ -1173,6 +1181,21 @@ function setupInactivityDetection() {
     mobileSkipForwardButton.addEventListener('click', handleSkipForward);
     muteButton.addEventListener('click', toggleMute);
     audioSubtitleToggle.addEventListener('click', e => { e.stopPropagation(); toggleAudioSubtitleMenu(); });
+
+    // Next Episode button — only shown on TV routes
+    const nextEpisodeButton = document.getElementById('next-episode-button');
+    const tvMatch = window.location.pathname.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
+    if (tvMatch) {
+        nextEpisodeButton.classList.remove('hidden');
+        nextEpisodeButton.addEventListener('click', () => {
+            const seriesId      = tvMatch[1];
+            const seasonNumber  = Number(tvMatch[2]);
+            const nextEpisode   = Number(tvMatch[3]) + 1;
+            playEpisode(seriesId, seasonNumber, nextEpisode);
+        });
+    } else {
+        nextEpisodeButton.classList.add('hidden');
+    }
 
     seekBar.addEventListener('mousedown', startSeeking);
     seekBar.addEventListener('touchstart', startSeeking, {passive:true});
