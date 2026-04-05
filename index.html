@@ -1404,6 +1404,11 @@ async function playMovie(movieId) {
    PLAY EPISODE  –  /tv/{tmdbId}/S{season}/E{episode}
    ------------------------------------------------------------------------- */
 async function playEpisode(seriesId, seasonNumber, episodeNumber) {
+    const expectedPath = `/tv/${seriesId}/S${seasonNumber}/E${episodeNumber}`;
+    if (window.location.pathname !== expectedPath) {
+        history.replaceState(null, '', expectedPath);
+    }
+
     showLoader();
 
     const githubJsonUrl =
