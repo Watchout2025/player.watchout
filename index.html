@@ -1020,7 +1020,8 @@ function renderTracksMenu() {
 
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
-            li.textContent = getDisplayName(track, false);
+            const displayName = getDisplayName(track, false);
+            li.textContent = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
             li.dataset.index  = originalIdx;
             li.dataset.type   = 'subtitle';
             li.dataset.hlsIdx = isHlsManaged ? hlsIdx : '';
