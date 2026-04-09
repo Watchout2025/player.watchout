@@ -1010,15 +1010,9 @@ function renderTracksMenu() {
         sortedTracks.forEach(({ track, originalIdx, source }) => {
             const selected = track.mode === 'showing';
 
-            // Source group label divider (only for HLS/Stream source)
+            // Source group label dividers removed
             if (source !== lastSource) {
                 lastSource = source;
-                if (source === 'hls') {
-                    const divider = document.createElement('li');
-                    divider.className = 'text-xs text-gray-500 uppercase tracking-widest pt-2 pb-1 px-1 select-none';
-                    divider.textContent = 'Stream';
-                    subtitleList.appendChild(divider);
-                }
             }
 
             const hlsIdx = hlsSubTracks.findIndex(h => h.name === track.label || h.lang === track.language);
