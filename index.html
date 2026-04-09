@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -966,37 +965,70 @@ function renderTracksMenu() {
         });
     }
 
-    // Always read subtitles from native video.textTracks — GitHub-injected <track> elements
-    // live here regardless of whether HLS.js is handling the stream.
-    const subTracks = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
-    const curSubIdx = subTracks.findIndex(t=>t.mode==='showing');
+    // Read all subtitle/caption tracks from video.textTracks
+    // They come from three sources: HLS (no data-* attr), GitHub (data-github), Wyzie (data-wyzie)
+    // We display them in order: HLS → GitHub → Wyzie
+    const allTextTracks = video.textTracks
+        ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions')
+        : [];
 
+    // Map each textTrack to its source by cross-referencing <track> elements
+    const trackElements = Array.from(video.querySelectorAll('track'));
+    function getTrackSource(textTrack) {
+        const el = trackElements.find(el =>
+            el.label === textTrack.label && el.srclang === textTrack.language
+        );
+        if (!el) return 'hls';
+        if (el.hasAttribute('data-wyzie'))  return 'wyzie';
+        if (el.hasAttribute('data-github')) return 'github';
+        return 'hls';
+    }
+
+    const hlsSubTracks    = (isHlsJsMode && hlsInstance) ? hlsInstance.subtitleTracks : [];
+
+    // Sort: HLS first, GitHub second, Wyzie third
+    const SOURCE_ORDER = { hls: 0, github: 1, wyzie: 2 };
+    const sortedTracks = allTextTracks
+        .map((t, i) => ({ track: t, originalIdx: i, source: getTrackSource(t) }))
+        .sort((a, b) => SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source]);
+
+    const curSubIdx = allTextTracks.findIndex(t => t.mode === 'showing');
+
+    // Off button
     const offLi = document.createElement('li');
-    offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx===-1?'font-bold text-white':'text-gray-400'}`;
+    offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx === -1 ? 'font-bold text-white' : 'text-gray-400'}`;
     offLi.textContent = 'Off';
     offLi.dataset.index = -1;
     offLi.dataset.type  = 'subtitle';
     offLi.addEventListener('click', () => handleTrackSelection('subtitle', -1));
     subtitleList.appendChild(offLi);
 
-    if (!subTracks.length && curSubIdx === -1) {
+    if (!sortedTracks.length) {
         subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
     } else {
-        subTracks.forEach((track, i) => {
+        let lastSource = null;
+        sortedTracks.forEach(({ track, originalIdx, source }) => {
             const selected = track.mode === 'showing';
-            // Determine if this track is HLS.js-managed: it will have a matching entry in hlsInstance.subtitleTracks
-            const hlsSubTracks = (isHlsJsMode && hlsInstance) ? hlsInstance.subtitleTracks : [];
+
+            // Source group label divider
+            if (source !== lastSource) {
+                lastSource = source;
+                const divider = document.createElement('li');
+                divider.className = 'text-xs text-gray-500 uppercase tracking-widest pt-2 pb-1 px-1 select-none';
+                divider.textContent = source === 'hls' ? 'Stream' : source === 'github' ? 'GitHub' : 'OpenSubtitles';
+                subtitleList.appendChild(divider);
+            }
+
             const hlsIdx = hlsSubTracks.findIndex(h => h.name === track.label || h.lang === track.language);
-            const isHlsTrack = hlsIdx !== -1;
+            const isHlsManaged = source === 'hls' && hlsIdx !== -1;
 
             const li = document.createElement('li');
-            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
-            // Always use native textTrack properties (.language / .label) for display name
+            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
             li.textContent = getDisplayName(track, false);
-            li.dataset.index = i;
-            li.dataset.type  = 'subtitle';
-            li.dataset.hlsIdx = isHlsTrack ? hlsIdx : '';  // store HLS.js index if applicable
-            li.addEventListener('click', () => handleTrackSelection('subtitle', i, isHlsTrack ? hlsIdx : -2));
+            li.dataset.index  = originalIdx;
+            li.dataset.type   = 'subtitle';
+            li.dataset.hlsIdx = isHlsManaged ? hlsIdx : '';
+            li.addEventListener('click', () => handleTrackSelection('subtitle', originalIdx, isHlsManaged ? hlsIdx : -2));
             subtitleList.appendChild(li);
 
             track.onchange = renderTracksMenu;
@@ -1389,6 +1421,8 @@ function initHlsPlayer(url) {
         hlsInstance.destroy();
         hlsInstance = null;
     }
+    // Remove injected subtitle tracks from previous episode
+    Array.from(video.querySelectorAll('track[data-github], track[data-wyzie]')).forEach(t => t.remove());
     errorMessageDiv.classList.add('hidden');
 
     // Reset per-episode progress state so the new episode starts fresh.
@@ -1475,6 +1509,7 @@ async function playMovie(movieId) {
         if (cleanUrl && (cleanUrl.includes('.m3u8') || cleanUrl.includes('http'))) {
             initHlsPlayer(cleanUrl);
             loadSubtitlesFromGithub('movie', movieId);
+            loadSubtitlesFromWyzie('movie', movieId);
             fetchAndSetTitle('movie', movieId);
         } else {
             displayError(`Invalid stream URL received for movie ${movieId}.`);
@@ -1514,6 +1549,7 @@ async function playEpisode(seriesId, seasonNumber, episodeNumber) {
         if (fileId) {
             initHlsPlayer(fileId);
             loadSubtitlesFromGithub('tv', seriesId, seasonNumber, episodeNumber);
+            loadSubtitlesFromWyzie('tv', seriesId, seasonNumber, episodeNumber);
             fetchAndSetTitle('tv', seriesId, seasonNumber, episodeNumber);
         } else {
             displayError(`Episode ${episodeNumber} not found in season data.`);
@@ -1665,7 +1701,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
 
         // Wait until video element is ready to accept tracks
         const inject = () => {
-            // Revoke old blob URLs and remove previously injected tracks
+            // Remove previously injected GitHub tracks
             Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
 
             validTracks.forEach(({ lang, blobUrl }) => {
@@ -1692,6 +1728,82 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
     } catch (e) {
         // Silently ignore — subtitles are optional
         console.warn('Could not load subtitles.json:', e.message);
+    }
+}
+
+/* -------------------------------------------------------------------------
+   SUBTITLES FROM WYZIE (OpenSubtitles proxy)
+   Priority order in menu: HLS → GitHub → Wyzie
+   ------------------------------------------------------------------------- */
+const WYZIE_API    = 'https://sub.wyzie.io/search';
+const WYZIE_KEY    = 'wyzie-ea127adc7693d78810f9cf157f267ea0';
+
+async function loadSubtitlesFromWyzie(type, id, season, episode) {
+    try {
+        // Build query URL
+        let apiUrl = `${WYZIE_API}?id=${id}&key=${WYZIE_KEY}`;
+        if (type === 'tv') {
+            apiUrl += `&season=${season}&episode=${episode}`;
+        }
+
+        const res = await fetch(apiUrl);
+        if (!res.ok) return; // Silent fail — subtitles are optional
+
+        const tracks = await res.json();
+        if (!Array.isArray(tracks) || !tracks.length) return;
+
+        // Fetch all SRT files in parallel and convert to VTT blob URLs
+        const trackData = await Promise.all(tracks.map(async (track) => {
+            try {
+                const srtRes = await fetch(track.url);
+                if (!srtRes.ok) return null;
+                const srtText = await srtRes.text();
+                const vttText = srtToVtt(srtText);
+                const blob    = new Blob([vttText], { type: 'text/vtt;charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                _subtitleBlobUrls.push(blobUrl);
+                return {
+                    display : track.display || track.language,
+                    lang    : track.language,
+                    blobUrl,
+                    isHI    : track.isHearingImpaired || false,
+                };
+            } catch (err) {
+                console.warn(`Wyzie: failed to load subtitle for ${track.language}:`, err.message);
+                return null;
+            }
+        }));
+
+        const validTracks = trackData.filter(Boolean);
+        if (!validTracks.length) return;
+
+        const inject = () => {
+            // Remove previously injected Wyzie tracks before re-injecting
+            Array.from(video.querySelectorAll('track[data-wyzie]')).forEach(t => t.remove());
+
+            validTracks.forEach(({ display, lang, blobUrl, isHI }) => {
+                const track = document.createElement('track');
+                track.kind    = 'subtitles';
+                track.label   = display + (isHI ? ' [CC]' : '');
+                track.srclang = lang;
+                track.src     = blobUrl;
+                track.setAttribute('data-wyzie', '1');
+                track.default = false;
+                video.appendChild(track);
+            });
+
+            // Re-render menu so Wyzie tracks appear after HLS + GitHub tracks
+            renderTracksMenu();
+        };
+
+        if (video.readyState >= 1) {
+            inject();
+        } else {
+            video.addEventListener('loadedmetadata', inject, { once: true });
+        }
+
+    } catch (e) {
+        console.warn('Wyzie subtitle load failed:', e.message);
     }
 }
 
