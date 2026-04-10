@@ -76,6 +76,9 @@
         /* Top bar container */
         #top-bar { pointer-events: none; }
         #top-bar > * { pointer-events: auto; }
+        @media(min-width:500px) and (max-width:999px){
+            #fullscreen-button { display: none !important; }
+        }
         @media(min-width:500px){
             #left-controlbuttons, #right-controlbuttons{gap:1.5rem;}
             #bottom-controls-row{padding-top:24px;padding-bottom:24px;}
