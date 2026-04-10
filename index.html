@@ -1541,13 +1541,14 @@ function initHlsPlayer(url) {
    PLAY MOVIE  –  /movie/{tmdbId}
    ------------------------------------------------------------------------- */
 async function playMovie(movieId) {
+    _revokeAllSubtitleBlobs();
     showLoader();
 
     const githubUrl =
         `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/movie/${movieId}`;
 
     try {
-        const res = await fetch(githubUrl);
+        const res = await fetch(githubUrl, { cache: 'no-store' });
         if (!res.ok) {
             displayError(`Could not load movie data (HTTP ${res.status}).`);
             hideLoader();
@@ -1575,6 +1576,7 @@ async function playMovie(movieId) {
    PLAY EPISODE  –  /tv/{tmdbId}/S{season}/E{episode}
    ------------------------------------------------------------------------- */
 async function playEpisode(seriesId, seasonNumber, episodeNumber) {
+    _revokeAllSubtitleBlobs();
     const expectedPath = `/tv/${seriesId}/S${seasonNumber}/E${episodeNumber}`;
     if (window.location.pathname !== expectedPath) {
         history.replaceState(null, '', expectedPath);
@@ -1586,7 +1588,7 @@ async function playEpisode(seriesId, seasonNumber, episodeNumber) {
         `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${seriesId}/S${seasonNumber}.json`;
 
     try {
-        const res = await fetch(githubJsonUrl);
+        const res = await fetch(githubJsonUrl, { cache: 'no-store' });
         if (!res.ok) {
             displayError(`Could not load season data (HTTP ${res.status}).`);
             hideLoader();
@@ -1716,6 +1718,12 @@ function srtToVtt(srt) {
 // Track blob URLs so we can revoke them when reloading
 const _subtitleBlobUrls = [];
 
+function _revokeAllSubtitleBlobs() {
+    while (_subtitleBlobUrls.length) {
+        URL.revokeObjectURL(_subtitleBlobUrls.pop());
+    }
+}
+
 async function loadSubtitlesFromGithub(type, id, season, episode) {
     let jsonPath;
     if (type === 'movie') {
@@ -1725,7 +1733,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
     }
 
     try {
-        const res = await fetch(jsonPath);
+        const res = await fetch(jsonPath, { cache: 'no-store' });
         if (!res.ok) return; // No subtitles yet — silent fail
 
         const data = await res.json();
@@ -1736,7 +1744,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
         // Fetch all SRT files and convert to VTT blob URLs in parallel
         const trackData = await Promise.all(langs.map(async (lang) => {
             try {
-                const srtRes = await fetch(subs[lang]);
+                const srtRes = await fetch(subs[lang], { cache: 'no-store' });
                 if (!srtRes.ok) return null;
                 const srtText = await srtRes.text();
                 const vttText = srtToVtt(srtText);
@@ -1800,7 +1808,7 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
             apiUrl += `&season=${season}&episode=${episode}`;
         }
 
-        const res = await fetch(apiUrl);
+        const res = await fetch(apiUrl, { cache: 'no-store' });
         if (!res.ok) return; // Silent fail — subtitles are optional
 
         const tracks = await res.json();
@@ -1809,7 +1817,7 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
         // Fetch all SRT files in parallel and convert to VTT blob URLs
         const trackData = await Promise.all(tracks.map(async (track) => {
             try {
-                const srtRes = await fetch(track.url);
+                const srtRes = await fetch(track.url, { cache: 'no-store' });
                 if (!srtRes.ok) return null;
                 const srtText = await srtRes.text();
                 const vttText = srtToVtt(srtText);
