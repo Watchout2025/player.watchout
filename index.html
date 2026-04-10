@@ -65,6 +65,17 @@
         @media(max-width:500px){
             #back-button, #report-button{display:none;}
         }
+        /* Mobile title: visible only on mobile/tablet */
+        #mobile-title { display: none; }
+        @media(max-width:999px){
+            #mobile-title { display: flex; }
+        }
+        @media(min-width:1000px){
+            #mobile-title { display: none !important; }
+        }
+        /* Top bar container */
+        #top-bar { pointer-events: none; }
+        #top-bar > * { pointer-events: auto; }
         @media(min-width:500px){
             #left-controlbuttons, #right-controlbuttons{gap:1.5rem;}
             #bottom-controls-row{padding-top:24px;padding-bottom:24px;}
@@ -339,18 +350,26 @@
     <div id="bottom-overlay"
          class="absolute inset-0 flex flex-col justify-end transition-opacity duration-500 controls-visible z-20 pointer-events-none">
         <div id="controls-bar" class="w-full bg-gradient-to-t from-black/70 to-transparent flex flex-col space-y-2 md:space-y-3 pointer-events-auto">
-            <!-- Back button (top left, hides with controls) -->
-            <button id="back-button" class="absolute top-6 left-6 z-20 text-white hover:opacity-80 transition-opacity duration-500 controls-visible focus:outline-none" style="width:2.2rem;height:2.2rem;margin:0;align-items:center;justify-content:center" onclick="window.history.back()">
-                 <svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="2.2rem" height="2.2rem" data-icon="ArrowLeftMedium" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" role="img">
-                     <path fill="#FFFFFF" fill-rule="evenodd" d="M6.414 11H21v2H6.414l5.293 5.293-1.414 1.414-7-7a1 1 0 0 1 0-1.414l7-7 1.414 1.414z" clip-rule="evenodd"></path>
-                </svg>
-            </button>
-            <!-- Report button (top right, hides with controls) -->
-            <button id="report-button" class="absolute top-6 right-6 z-20 text-white hover:opacity-80 transition-opacity duration-500 controls-visible focus:outline-none" style="width:2.2rem;height:2.2rem;margin:0px;align-items:center;justify-content:center">
-                 <svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="2.2rem" height="2.2rem" data-icon="FlagMedium" data-icon-id=":r5q:" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" role="img">
-                     <path fill="#FFFFFF" fill-rule="evenodd" d="M3 2a1 1 0 0 0-1 1v19h2V10.579c1.85.029 3.241.142 5 .334v2.658a1 1 0 0 0 .726.962C13.026 15.473 15.873 16 21 16a1 1 0 0 0 1-1V8.429a1 1 0 0 0-1-1c-2.383 0-3.939-.117-6-.342V4.43a1 1 0 0 0-.726-.962C10.974 2.528 8.127 2 3 2m1 6.579c2.257.034 3.859.188 6.113.446l.887.101v3.685c2.616.706 5.052 1.123 9 1.182V9.42c-2.257-.034-3.859-.188-6.113-.446l-.887-.1V5.189c-2.616-.706-5.051-1.123-9-1.182z" clip-rule="evenodd"></path>
-                 </svg>
-            </button>
+            <!-- Top bar: back · title · report -->
+            <div id="top-bar" class="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 transition-opacity duration-500 controls-visible" style="height:4.5rem;">
+                <!-- Back button -->
+                <button id="back-button" class="text-white hover:opacity-80 transition-opacity duration-500 focus:outline-none flex-shrink-0 flex items-center justify-center" style="width:2.2rem;height:2.2rem;" onclick="window.history.back()">
+                    <svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="2.2rem" height="2.2rem" data-icon="ArrowLeftMedium" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" role="img">
+                        <path fill="#FFFFFF" fill-rule="evenodd" d="M6.414 11H21v2H6.414l5.293 5.293-1.414 1.414-7-7a1 1 0 0 1 0-1.414l7-7 1.414 1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+                <!-- Mobile title (centre, mobile only) -->
+                <div id="mobile-title" class="flex flex-col items-center pointer-events-none" style="max-width:55vw;">
+                    <span id="mobile-title-main" class="text-white font-medium text-sm leading-tight text-center" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;"></span>
+                    <span id="mobile-title-sub" class="text-white/60 text-xs leading-tight text-center mt-0.5" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;"></span>
+                </div>
+                <!-- Report button -->
+                <button id="report-button" class="text-white hover:opacity-80 transition-opacity duration-500 focus:outline-none flex-shrink-0 flex items-center justify-center" style="width:2.2rem;height:2.2rem;">
+                    <svg xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="2.2rem" height="2.2rem" data-icon="FlagMedium" data-icon-id=":r5q:" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" role="img">
+                        <path fill="#FFFFFF" fill-rule="evenodd" d="M3 2a1 1 0 0 0-1 1v19h2V10.579c1.85.029 3.241.142 5 .334v2.658a1 1 0 0 0 .726.962C13.026 15.473 15.873 16 21 16a1 1 0 0 0 1-1V8.429a1 1 0 0 0-1-1c-2.383 0-3.939-.117-6-.342V4.43a1 1 0 0 0-.726-.962C10.974 2.528 8.127 2 3 2m1 6.579c2.257.034 3.859.188 6.113.446l.887.101v3.685c2.616.706 5.052 1.123 9 1.182V9.42c-2.257-.034-3.859-.188-6.113-.446l-.887-.1V5.189c-2.616-.706-5.051-1.123-9-1.182z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
             <!-- Timeline -->
             <div id="timeline-row" class="flex items-center space-x-2 md:space-x-4 w-full">
                 <div id="seek-bar"
@@ -1626,6 +1645,8 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const data = await res.json();
             document.getElementById('title-main-text').textContent = data.title || '';
             document.getElementById('title-sub-text').textContent = '';
+            document.getElementById('mobile-title-main').textContent = data.title || '';
+            document.getElementById('mobile-title-sub').textContent = '';
             document.title = data.title || document.title;
         } else if (type === 'tv') {
             const [seriesRes, epRes] = await Promise.all([
@@ -1640,6 +1661,8 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
             document.getElementById('title-main-text').textContent = fullTitle;
             document.getElementById('title-sub-text').textContent  = '';
+            document.getElementById('mobile-title-main').textContent = seriesName || fullTitle;
+            document.getElementById('mobile-title-sub').textContent  = seriesName ? `${label}${epName ? ' · ' + epName : ''}` : '';
             document.title = fullTitle || document.title;
         }
     } catch (e) {
