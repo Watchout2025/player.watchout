@@ -1657,10 +1657,11 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const ep     = epRes.ok     ? await epRes.json()     : {};
             const seriesName = series.name || '';
             const epName     = ep.name    || '';
-            const label      = `S${season}E${episode}`;
+            const label      = `S${season}:E${episode}`;
             const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
+            const mobileTitle = `${label} "${epName || seriesName}"`;
             document.getElementById('title-main-text').textContent = fullTitle;
-            document.getElementById('mobile-title-main').textContent = fullTitle;
+            document.getElementById('mobile-title-main').textContent = mobileTitle;
             document.title = fullTitle || document.title;
         }
     } catch (e) {
