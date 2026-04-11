@@ -69,6 +69,11 @@
         #mobile-title { display: none; }
         @media(max-width:999px){
             #mobile-title { display: flex; }
+            #mobile-title-main {
+                font-size: 16px !important;
+                font-weight: 100 !important;
+                letter-spacing: 0.01em !important;
+            }
         }
         @media(min-width:1000px){
             #mobile-title { display: none !important; }
@@ -159,20 +164,9 @@
             white-space: nowrap;
             max-width: 100%;
         }
-        #title-display .title-sub {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.72rem;
-            font-weight: 400;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 100%;
-            margin-top: 1px;
-        }
         @media (max-width: 600px) {
             #title-display { max-width: 28vw; }
             #title-display .title-main { font-size: 0.75rem; }
-            #title-display .title-sub { display: none; }
         }
         @media (max-width: 999px) {
             #title-display { display: none !important; }
@@ -367,7 +361,7 @@
                 <!-- Mobile title (centre, mobile only) -->
                 <div id="mobile-title" class="flex flex-col items-center pointer-events-none" style="max-width:55vw;">
                     <span id="mobile-title-main" class="text-white font-medium text-sm leading-tight text-center" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;"></span>
-                    <span id="mobile-title-sub" class="text-white/60 text-xs leading-tight text-center mt-0.5" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;"></span>
+
                 </div>
                 <!-- Report button -->
                 <button id="report-button" class="text-white hover:opacity-80 transition-opacity duration-500 focus:outline-none flex-shrink-0 flex items-center justify-center" style="width:2.2rem;height:2.2rem;">
@@ -401,7 +395,7 @@
                 <!-- Centered title display -->
                 <div id="title-display">
                     <span class="title-main" id="title-main-text"></span>
-                    <span class="title-sub" id="title-sub-text"></span>
+
                 </div>
                 <div id="left-controlbuttons" class="flex items-center space-x-1 md:space-x-2">
                     <!-- Play / Pause -->
@@ -1652,9 +1646,7 @@ async function fetchAndSetTitle(type, id, season, episode) {
             if (!res.ok) return;
             const data = await res.json();
             document.getElementById('title-main-text').textContent = data.title || '';
-            document.getElementById('title-sub-text').textContent = '';
             document.getElementById('mobile-title-main').textContent = data.title || '';
-            document.getElementById('mobile-title-sub').textContent = '';
             document.title = data.title || document.title;
         } else if (type === 'tv') {
             const [seriesRes, epRes] = await Promise.all([
@@ -1668,9 +1660,7 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const label      = `S${season}E${episode}`;
             const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
             document.getElementById('title-main-text').textContent = fullTitle;
-            document.getElementById('title-sub-text').textContent  = '';
-            document.getElementById('mobile-title-main').textContent = seriesName || fullTitle;
-            document.getElementById('mobile-title-sub').textContent  = seriesName ? `${label}${epName ? ' · ' + epName : ''}` : '';
+            document.getElementById('mobile-title-main').textContent = fullTitle;
             document.title = fullTitle || document.title;
         }
     } catch (e) {
