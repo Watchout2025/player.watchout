@@ -1319,11 +1319,39 @@ function setupUIControls() {
 
 /* -------------------------------------------------------------------------
    NEXT EPISODE BUTTON VISIBILITY  –  called on each episode change
+   Hides the button if the next episode key is absent from the season JSON.
    ------------------------------------------------------------------------- */
-function updateNextEpisodeButtonVisibility() {
+async function updateNextEpisodeButtonVisibility() {
     const nextEpisodeButton = document.getElementById('next-episode-button');
-    const isTv = /\/tv\/(\d+)\/S(\d+)\/E(\d+)/i.test(window.location.pathname);
-    nextEpisodeButton.classList.toggle('hidden', !isTv);
+    const tvMatch = window.location.pathname.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
+
+    if (!tvMatch) {
+        nextEpisodeButton.classList.add('hidden');
+        return;
+    }
+
+    // Optimistically hide while we check, so the button never briefly shows wrong
+    nextEpisodeButton.classList.add('hidden');
+
+    const seriesId     = tvMatch[1];
+    const seasonNumber = Number(tvMatch[2]);
+    const nextEpisode  = Number(tvMatch[3]) + 1;
+
+    try {
+        const githubJsonUrl =
+            `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${seriesId}/S${seasonNumber}.json`;
+        const res  = await fetch(githubJsonUrl, { cache: 'no-store' });
+        if (!res.ok) return; // Can't confirm next episode — keep hidden
+
+        const data = await res.json();
+        if (data[nextEpisode]) {
+            nextEpisodeButton.classList.remove('hidden');
+        }
+        // Otherwise stays hidden — next episode doesn't exist in JSON
+    } catch (e) {
+        // Network/parse error — keep button hidden to avoid dead clicks
+        console.warn('updateNextEpisodeButtonVisibility failed:', e.message);
+    }
 }
 
 /* -------------------------------------------------------------------------
