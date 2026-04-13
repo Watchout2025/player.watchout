@@ -107,6 +107,54 @@
         #audio-tracks-container::-webkit-scrollbar,#subtitle-tracks-container::-webkit-scrollbar{width:8px}
         #audio-tracks-container::-webkit-scrollbar-thumb,#subtitle-tracks-container::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
         #audio-tracks-container::-webkit-scrollbar-track,#subtitle-tracks-container::-webkit-scrollbar-track{background:transparent}
+
+        /* ---- Mobile fullscreen audio/subtitle menu ---- */
+        @media (max-width: 999px) {
+            #audio-subtitle-menu:not(.hidden) {
+                position: fixed !important;
+                inset: 0 !important;
+                bottom: unset !important;
+                right: unset !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                z-index: 99999 !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+            }
+            #audio-subtitle-menu-inner {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px;
+            }
+            #audio-subtitle-menu .flex.gap-4 {
+                flex-direction: column;
+                gap: 0;
+            }
+            #audio-tracks-container,
+            #subtitle-tracks-container {
+                max-height: unset !important;
+                overflow-y: visible !important;
+                border-left: none !important;
+                padding: 0 !important;
+            }
+            #subtitle-tracks-container {
+                border-top: 1px solid rgba(255,255,255,0.1);
+                margin-top: 16px;
+                padding-top: 16px !important;
+            }
+            #audio-subtitle-menu-header {
+                display: flex !important;
+            }
+        }
+        @media (min-width: 1000px) {
+            #audio-subtitle-menu-header { display: none !important; }
+            #audio-subtitle-menu-inner { padding: 0; }
+        }
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
@@ -503,24 +551,32 @@
                         <div id="audio-subtitle-menu"
                              class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] rounded-[0.4rem] shadow-2xl p-4 hidden text-white transition-opacity duration-200"
                              style="background-color:#262626">
-                            <div class="flex gap-4">
-                                <div id="audio-tracks-container"
-                                     class="flex-1 max-h-64 overflow-y-auto pr-2">
-                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
-                                        Audio Tracks
-                                    </h4>
-                                    <ul id="audio-list" class="space-y-1 text-sm">
-                                        <li class="text-gray-400">Loading tracks...</li>
-                                    </ul>
-                                </div>
-                                <div id="subtitle-tracks-container"
-                                     class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
-                                    <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
-                                        Subtitles
-                                    </h4>
-                                    <ul id="subtitle-list" class="space-y-1 text-sm">
-                                        <li class="text-gray-400">Loading tracks...</li>
-                                    </ul>
+                            <!-- Mobile-only header -->
+                            <div id="audio-subtitle-menu-header" class="hidden items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+                                <span class="text-white font-semibold text-base">Audio &amp; Subtitles</span>
+                                <button id="audio-subtitle-close" onclick="toggleAudioSubtitleMenu()" style="background:none;border:none;color:#b3b3b3;font-size:24px;cursor:pointer;line-height:1;padding:0;">&times;</button>
+                            </div>
+                            <!-- Scrollable content -->
+                            <div id="audio-subtitle-menu-inner">
+                                <div class="flex gap-4">
+                                    <div id="audio-tracks-container"
+                                         class="flex-1 max-h-64 overflow-y-auto pr-2">
+                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
+                                            Audio Tracks
+                                        </h4>
+                                        <ul id="audio-list" class="space-y-1 text-sm">
+                                            <li class="text-gray-400">Loading tracks...</li>
+                                        </ul>
+                                    </div>
+                                    <div id="subtitle-tracks-container"
+                                         class="flex-1 max-h-64 overflow-y-auto pl-2 border-l border-gray-700">
+                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 border-b border-gray-700/50 pb-1">
+                                            Subtitles
+                                        </h4>
+                                        <ul id="subtitle-list" class="space-y-1 text-sm">
+                                            <li class="text-gray-400">Loading tracks...</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -971,7 +1027,8 @@ function toggleAudioSubtitleMenu() {
 function handleDocumentClick(e) {
     if (!audioSubtitleMenu.classList.contains('hidden') &&
         !audioSubtitleMenu.contains(e.target) &&
-        !audioSubtitleToggle.contains(e.target)) {
+        !audioSubtitleToggle.contains(e.target) &&
+        window.innerWidth >= 1000) {
         audioSubtitleMenu.classList.add('hidden');
         resetInactivityTimer();
     }
