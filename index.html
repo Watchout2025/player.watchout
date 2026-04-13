@@ -129,6 +129,13 @@
         #audio-tracks-container::-webkit-scrollbar-thumb,#subtitle-tracks-container::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
         #audio-tracks-container::-webkit-scrollbar-track,#subtitle-tracks-container::-webkit-scrollbar-track{background:transparent}
 
+        /* ---- Track list font size on mobile ---- */
+        @media (max-width: 999px) {
+            #audio-list, #subtitle-list {
+                font-size: 16px !important;
+            }
+        }
+
         /* ---- Track list item hover effect ---- */
         .track-selector {
             border-radius: 4px;
@@ -595,7 +602,7 @@
                                 <div class="flex gap-4">
                                     <div id="audio-tracks-container"
                                          class="flex-1 flex flex-col min-h-0 pr-2">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 pb-1 flex-shrink-0">
+                                        <h4 class="mb-2 text-gray-200 pb-1 flex-shrink-0" style="font-size:16px;font-weight:700;">
                                             Audio
                                         </h4>
                                         <ul id="audio-list" class="space-y-1 text-sm overflow-y-auto max-h-56">
@@ -604,7 +611,7 @@
                                     </div>
                                     <div id="subtitle-tracks-container"
                                          class="flex-1 flex flex-col min-h-0 pl-2 border-l border-gray-700">
-                                        <h4 class="text-sm font-semibold mb-2 text-gray-200 pb-1 flex-shrink-0">
+                                        <h4 class="mb-2 text-gray-200 pb-1 flex-shrink-0" style="font-size:16px;font-weight:700;">
                                             Subtitles
                                         </h4>
                                         <ul id="subtitle-list" class="space-y-1 text-sm overflow-y-auto max-h-56">
