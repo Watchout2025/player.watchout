@@ -1075,8 +1075,8 @@ function renderTracksMenu() {
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${selected?'font-bold text-white':'text-gray-400'}`;
             const check = document.createElement('span');
-            check.textContent = '✓';
-            check.style.cssText = `visibility:${selected?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+            check.style.cssText = `visibility:${selected?'visible':'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+            check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
             const label = document.createElement('span');
             label.textContent = getDisplayName(track, isHlsJsMode);
             li.appendChild(check);
@@ -1122,7 +1122,8 @@ function renderTracksMenu() {
     offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${curSubIdx === -1 ? 'font-bold text-white' : 'text-gray-400'}`;
     const offCheck = document.createElement('span');
     offCheck.textContent = '✓';
-    offCheck.style.cssText = `visibility:${curSubIdx === -1 ?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+    offCheck.style.cssText = `visibility:${curSubIdx === -1 ?'visible':'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+    offCheck.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
     const offLabel = document.createElement('span');
     offLabel.textContent = 'Off';
     offLi.appendChild(offCheck);
@@ -1150,8 +1151,8 @@ function renderTracksMenu() {
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
             const check = document.createElement('span');
-            check.textContent = '✓';
-            check.style.cssText = `visibility:${selected?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+            check.style.cssText = `visibility:${selected?'visible':'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+            check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
             const label = document.createElement('span');
             const displayName = getDisplayName(track, false);
             label.textContent = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
