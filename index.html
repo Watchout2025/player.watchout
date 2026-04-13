@@ -583,7 +583,7 @@
                                 </div>
                             </div>
                             <!-- Mobile-only footer -->
-                            <div id="audio-subtitle-menu-footer" style="display:none;position: absolute;width: 100%;bottom: 0;right: 0;background:#000000a6;justify-content:flex-end;gap:8px;padding:12px 16px;flex-shrink:0;">
+                            <div id="audio-subtitle-menu-footer" style="display:none;position: absolute;width: 100%;bottom: 0;right: 0;background:transparent;justify-content:flex-end;gap:8px;padding:12px 16px;flex-shrink:0;">
                                 <button onclick="toggleAudioSubtitleMenu()" style="background:#242424;color:#fff;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;border-radius:2px;">Cancel</button>
                                 <button onclick="toggleAudioSubtitleMenu()" style="background:white;border:none;color:#000;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;border-radius:2px;">Apply</button>
                             </div>
@@ -1073,8 +1073,14 @@ function renderTracksMenu() {
         audioTracks.forEach((track, i) => {
             const selected = isHlsJsMode ? (i === curAudioIdx) : track.enabled;
             const li = document.createElement('li');
-            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected?'font-bold text-white':'text-gray-400'}`;
-            li.textContent = getDisplayName(track, isHlsJsMode);
+            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${selected?'font-bold text-white':'text-gray-400'}`;
+            const check = document.createElement('span');
+            check.textContent = '✓';
+            check.style.cssText = `visibility:${selected?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+            const label = document.createElement('span');
+            label.textContent = getDisplayName(track, isHlsJsMode);
+            li.appendChild(check);
+            li.appendChild(label);
             li.dataset.index = i;
             li.dataset.type  = 'audio';
             li.addEventListener('click', () => handleTrackSelection('audio', i));
@@ -1113,8 +1119,14 @@ function renderTracksMenu() {
 
     // Off button
     const offLi = document.createElement('li');
-    offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${curSubIdx === -1 ? 'font-bold text-white' : 'text-gray-400'}`;
-    offLi.textContent = 'Off';
+    offLi.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${curSubIdx === -1 ? 'font-bold text-white' : 'text-gray-400'}`;
+    const offCheck = document.createElement('span');
+    offCheck.textContent = '✓';
+    offCheck.style.cssText = `visibility:${curSubIdx === -1 ?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+    const offLabel = document.createElement('span');
+    offLabel.textContent = 'Off';
+    offLi.appendChild(offCheck);
+    offLi.appendChild(offLabel);
     offLi.dataset.index = -1;
     offLi.dataset.type  = 'subtitle';
     offLi.addEventListener('click', () => handleTrackSelection('subtitle', -1));
@@ -1136,9 +1148,15 @@ function renderTracksMenu() {
             const isHlsManaged = source === 'hls' && hlsIdx !== -1;
 
             const li = document.createElement('li');
-            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
+            li.className = `track-selector cursor-pointer hover:opacity-80 p-1 rounded transition flex items-center gap-2 ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
+            const check = document.createElement('span');
+            check.textContent = '✓';
+            check.style.cssText = `visibility:${selected?'visible':'hidden'};color:rgb(225,0,0);font-size:0.85em;flex-shrink:0;`;
+            const label = document.createElement('span');
             const displayName = getDisplayName(track, false);
-            li.textContent = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
+            label.textContent = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
+            li.appendChild(check);
+            li.appendChild(label);
             li.dataset.index  = originalIdx;
             li.dataset.type   = 'subtitle';
             li.dataset.hlsIdx = isHlsManaged ? hlsIdx : '';
