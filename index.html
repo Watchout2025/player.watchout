@@ -130,14 +130,22 @@
             }
             #audio-subtitle-menu-inner {
                 flex: 1;
-                overflow-y: auto;
+                overflow: hidden;
                 padding: 16px;
+                display: flex;
+                flex-direction: column;
+            }
+            #audio-subtitle-menu-inner > .flex {
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
             }
             #audio-tracks-container,
             #subtitle-tracks-container {
                 max-height: unset !important;
-                overflow-y: visible !important;
-                border:none;
+                overflow-y: auto !important;
+                border: none;
+                min-height: 0;
             }
             #audio-subtitle-menu-footer {
                 display: flex !important;
