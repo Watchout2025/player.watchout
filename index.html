@@ -1667,8 +1667,46 @@ function initHlsPlayer(url) {
         isHlsJsMode = true;
         showLoader();
         const h = new Hls({
+            // Subtitle rendering
             renderTextTracksNatively: true,
             subtitleDisplay: true,
+
+            // Buffer tuning — prevents flickering/rebuffering
+            maxBufferLength: 30,
+            maxMaxBufferLength: 600,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferHole: 0.5,
+
+            // Back buffer — keep decoded frames behind playhead for smooth seeking
+            backBufferLength: 90,
+
+            // Fragment loading — reduce stalls that cause audio glitches
+            fragLoadingTimeOut: 20000,
+            fragLoadingMaxRetry: 6,
+            fragLoadingRetryDelay: 1000,
+            fragLoadingMaxRetryTimeout: 64000,
+
+            // Manifest / level loading
+            manifestLoadingTimeOut: 10000,
+            manifestLoadingMaxRetry: 4,
+            levelLoadingTimeOut: 10000,
+            levelLoadingMaxRetry: 4,
+
+            // Avoid ABR jumping to lower quality mid-segment (causes audio glitch)
+            startLevel: -1,
+            abrEwmaDefaultEstimate: 1000000,
+            abrBandWidthFactor: 0.95,
+            abrBandWidthUpFactor: 0.7,
+
+            // Prevent live-stream sync from seeking aggressively (ghost audio)
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 10,
+            liveDurationInfinity: false,
+
+            // Stall recovery
+            highBufferWatchdogPeriod: 2,
+            nudgeOffset: 0.1,
+            nudgeMaxRetry: 5,
         });
         hlsInstance = h;
 
