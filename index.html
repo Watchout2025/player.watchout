@@ -1037,21 +1037,33 @@ function unlockOrientation() {
     } catch (e) {}
 }
 
+function isInFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || video.webkitDisplayingFullscreen);
+}
+
 function toggleFullscreen() {
-    if (document.fullscreenElement) {
-        document.exitFullscreen();
+    // iOS Safari: only <video> supports native fullscreen via webkitEnterFullscreen
+    if (video.webkitEnterFullscreen && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        video.webkitEnterFullscreen();
+        return;
+    }
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
         if (isMobileDevice()) unlockOrientation();
     } else {
-        videoContainer.requestFullscreen({navigationUI:'hide'})
-            .then(() => { if (isMobileDevice()) lockLandscape(); })
-            .catch(err => displayError('Fullscreen error: ' + err.message));
+        const req = videoContainer.requestFullscreen || videoContainer.webkitRequestFullscreen;
+        if (req) {
+            req.call(videoContainer, { navigationUI: 'hide' })
+                .then(() => { if (isMobileDevice()) lockLandscape(); })
+                .catch(err => displayError('Fullscreen error: ' + err.message));
+        }
     }
 }
 function updateFullscreenIcon() {
-    const inFs = !!document.fullscreenElement;
+    const inFs = isInFullscreen();
     fullscreenEnterIcon.classList.toggle('hidden', inFs);
     fullscreenExitIcon.classList.toggle('hidden', !inFs);
-    // Also handle orientation if fullscreen was exited via browser UI (e.g. back gesture)
     if (!inFs && isMobileDevice()) unlockOrientation();
 }
 
@@ -1399,6 +1411,9 @@ function setupUIControls() {
     volumeControlWrapper.addEventListener('mouseleave', () => setTimeout(() => { if (!isVolumeAdjusting) volumeSliderContainer.classList.add('hidden'); }, 300));
 
     document.addEventListener('fullscreenchange', updateFullscreenIcon);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+    video.addEventListener('webkitbeginfullscreen', updateFullscreenIcon);
+    video.addEventListener('webkitendfullscreen', updateFullscreenIcon);
 
     video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
     video.addEventListener('progress', updateBufferProgress);
