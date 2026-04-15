@@ -6,7 +6,18 @@
     <title>Netout Player</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/video.js/8.10.0/video-js.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/8.10.0/video.min.js"></script>
+    <style>
+        /* Hide all Video.js built-in UI — we use our own custom controls */
+        .video-js .vjs-control-bar,
+        .video-js .vjs-big-play-button,
+        .video-js .vjs-loading-spinner,
+        .video-js .vjs-error-display,
+        .video-js .vjs-text-track-display { display: none !important; }
+        /* Ensure the video element fills its container */
+        .video-js, .video-js video { width: 100% !important; height: 100% !important; }
+    </style>
 
     <style>
         @font-face {
@@ -390,7 +401,7 @@
 <body>
 
 <div id="video-container" class="relative">
-    <video crossorigin="anonymous" id="video" class="w-full h-full object-contain" autoplay playsinline style="--cue-bottom:80px"></video>
+    <video crossorigin="anonymous" id="video" class="video-js w-full h-full object-contain" autoplay playsinline style="--cue-bottom:80px"></video>
 
     <!-- Left / Right skip hint -->
     <div id="skip-hint" class="text-white"></div>
@@ -706,7 +717,7 @@
 /* -------------------------------------------------------------------------
    DOM ELEMENTS
    ------------------------------------------------------------------------- */
-const video                = document.getElementById('video');
+let video                  = document.getElementById('video');
 const videoContainer       = document.getElementById('video-container');
 const errorMessageDiv      = document.getElementById('error-message');
 const skipHint             = document.getElementById('skip-hint');
@@ -812,8 +823,8 @@ const SPEED_OPTIONS = [
    ------------------------------------------------------------------------- */
 const urlParams   = new URLSearchParams(window.location.search);
 
-let resolvedUrl   = null;   /* set once we know the final HLS URL */
-let hlsInstance   = null;
+let resolvedUrl   = null;   /* set once we know the final stream URL */
+let vjsPlayer     = null;   /* Video.js player instance */
 let isHlsJsMode   = false;
 let inactivityTimer;
 const INACTIVITY_TIMEOUT = 3000;
@@ -1114,21 +1125,23 @@ function renderTracksMenu() {
         return name || `Track ${track.id ?? track.groupId ?? ''}`;
     };
 
-    const audioTracks = isHlsJsMode ? hlsInstance.audioTracks : (video.audioTracks ? Array.from(video.audioTracks) : []);
-    const curAudioIdx = isHlsJsMode ? hlsInstance.audioTrack : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t=>t.enabled) : -1);
+    const audioTracks = vjsPlayer ? Array.from(vjsPlayer.audioTracks()) : (video.audioTracks ? Array.from(video.audioTracks) : []);
+    const curAudioIdx = vjsPlayer
+        ? Array.from(vjsPlayer.audioTracks()).findIndex(t => t.enabled)
+        : (video.audioTracks ? Array.from(video.audioTracks).findIndex(t => t.enabled) : -1);
 
     if (!audioTracks.length) {
         audioList.innerHTML = '<li class="text-gray-400">No alternate audio tracks found.</li>';
     } else {
         audioTracks.forEach((track, i) => {
-            const selected = isHlsJsMode ? (i === curAudioIdx) : track.enabled;
+            const selected = vjsPlayer ? (i === curAudioIdx) : track.enabled;
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer flex items-center gap-2 ${selected?'font-bold text-white':'text-gray-400'}`;
             const check = document.createElement('span');
             check.style.cssText = `visibility:${selected?'visible':'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
             check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
             const label = document.createElement('span');
-            label.textContent = getDisplayName(track, isHlsJsMode);
+            label.textContent = getDisplayName(track, false);
             li.appendChild(check);
             li.appendChild(label);
             li.dataset.index = i;
@@ -1157,7 +1170,7 @@ function renderTracksMenu() {
         return 'hls';
     }
 
-    const hlsSubTracks    = (isHlsJsMode && hlsInstance) ? hlsInstance.subtitleTracks : [];
+    const hlsSubTracks = vjsPlayer ? Array.from(vjsPlayer.textTracks()).filter(t => t.kind === 'subtitles' || t.kind === 'captions') : [];
 
     // Sort: HLS first, GitHub second, Wyzie third
     const SOURCE_ORDER = { hls: 0, github: 1, wyzie: 2 };
@@ -1220,22 +1233,19 @@ function renderTracksMenu() {
 }
 function handleTrackSelection(type, idx, hlsIdx) {
     if (type === 'audio') {
-        if (isHlsJsMode && hlsInstance) hlsInstance.audioTrack = idx;
-        else if (video.audioTracks) {
-            for (let i=0;i<video.audioTracks.length;i++) video.audioTracks[i].enabled = (i===idx);
+        if (vjsPlayer) {
+            const tracks = vjsPlayer.audioTracks();
+            for (let i = 0; i < tracks.length; i++) tracks[i].enabled = (i === idx);
+        } else if (video.audioTracks) {
+            for (let i = 0; i < video.audioTracks.length; i++) video.audioTracks[i].enabled = (i === idx);
         }
     } else if (type === 'subtitle') {
-        const subs = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
+        const subs = video.textTracks ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions') : [];
         if (idx === -1) {
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
             subs.forEach(t => t.mode = 'disabled');
-        } else if (hlsIdx !== undefined && hlsIdx >= 0) {
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
-            // Also activate the native textTrack so the browser renders cues
-            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
         } else {
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
-            subs.forEach((t,i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+            // Activate the selected textTrack so the browser renders cues
+            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
         }
     }
     audioSubtitleMenu.classList.add('hidden');
@@ -1495,7 +1505,11 @@ async function updateNextEpisodeButtonVisibility() {
    PER-PLAYBACK SETUP  –  called each time a new stream starts
    ------------------------------------------------------------------------- */
 function setupInactivityDetection() {
-    if (!isHlsJsMode && video.audioTracks) video.audioTracks.addEventListener('change', renderTracksMenu);
+    if (vjsPlayer) {
+        vjsPlayer.audioTracks().addEventListener('change', renderTracksMenu);
+    } else if (video.audioTracks) {
+        video.audioTracks.addEventListener('change', renderTracksMenu);
+    }
 
     lastKnownVolume = video.volume > 0 ? video.volume : 0.5;
     updateProgress(); updateBufferProgress(); updateVolumeSlider(); updateFullscreenIcon();
@@ -1580,14 +1594,7 @@ function handleKeyboardShortcuts(e) {
         case 'KeyM': toggleMute(); break;
         case 'KeyF': toggleFullscreen(); break;
         case 'KeyC':
-            if (isHlsJsMode && hlsInstance) {
-                const cur = hlsInstance.subtitleTrack;
-                const nextIdx = cur === -1 ? 0 : -1;
-                hlsInstance.subtitleTrack = nextIdx;
-                // Sync native textTracks so cues actually render
-                const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
-                subs.forEach((t,i) => { t.mode = (nextIdx >= 0 && i === nextIdx) ? 'showing' : 'disabled'; });
-            } else if (video.textTracks) {
+            if (video.textTracks) {
                 const subs = Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions');
                 const showing = subs.some(t=>t.mode==='showing');
                 subs.forEach((t,i)=> t.mode = showing ? 'disabled' : (i===0?'showing':'disabled'));
@@ -1620,85 +1627,84 @@ function isDirectVideoUrl(url) {
 
 function initHlsPlayer(url) {
     // Flush progress for the current episode before switching.
-    // Must happen before resolvedUrl / videoStorageKey are overwritten.
     saveVideoProgress();
     if (saveProgressInterval) {
         clearInterval(saveProgressInterval);
         saveProgressInterval = null;
     }
 
-    // Tear down any existing HLS instance cleanly before starting a new one.
-    // This prevents the old instance from firing fatal error events mid-swap.
     stopProgressSaving();
     hasRestoredPosition = false;
-    if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
+
+    // Tear down any existing Video.js player instance cleanly.
+    if (vjsPlayer) {
+        vjsPlayer.dispose();
+        vjsPlayer = null;
+        // After dispose(), the original <video> element is gone — re-create it.
+        const container = document.getElementById('video-container');
+        const newVideo = document.createElement('video');
+        newVideo.id = 'video';
+        newVideo.setAttribute('playsinline', '');
+        newVideo.setAttribute('webkit-playsinline', '');
+        newVideo.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+        // Insert before the overlay div (first child)
+        container.insertBefore(newVideo, container.firstChild);
+        // Re-point the global `video` variable
+        video = document.getElementById('video');
     }
+
     // Remove injected subtitle tracks from previous episode
     Array.from(video.querySelectorAll('track[data-github], track[data-wyzie]')).forEach(t => t.remove());
     errorMessageDiv.classList.add('hidden');
 
-    // Reset per-episode progress state so the new episode starts fresh.
     hasRestoredPosition = false;
-
     resolvedUrl     = url;
     videoStorageKey = generateStorageKey(url);
 
-    /* ---- Direct video file (MP4, WebM, etc.) ---- */
-    if (isDirectVideoUrl(url)) {
-        isHlsJsMode = false;
-        showLoader();
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-            renderTracksMenu(); hideLoader(); setupInactivityDetection();
-            restoreVideoProgress(); startProgressSaving();
-            video.play().catch(() => {});
-        }, {once:true});
-        video.addEventListener('error', () => {
-            displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
-            hideLoader();
-        }, {once:true});
-        return;
-    }
+    const isHls = !isDirectVideoUrl(url);
+    isHlsJsMode = false; // Video.js handles HLS natively — no separate hlsInstance
 
-    /* ---- HLS stream (.m3u8) ---- */
-    if (Hls.isSupported()) {
-        isHlsJsMode = true;
-        showLoader();
-        const h = new Hls({
-            renderTextTracksNatively: true,
-            subtitleDisplay: true,
-        });
-        hlsInstance = h;
+    showLoader();
 
-        h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
-        h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
-        h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
-        h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
-        h.on(Hls.Events.ERROR, (ev, data) => {
-            if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
-        });
+    // Determine MIME type
+    const mimeType = isHls ? 'application/x-mpegURL' : (() => {
+        const ext = url.split('?')[0].split('.').pop().toLowerCase();
+        return { mp4: 'video/mp4', webm: 'video/webm', ogg: 'video/ogg', ogv: 'video/ogg',
+                 mov: 'video/mp4', m4v: 'video/mp4', mkv: 'video/x-matroska' }[ext] || 'video/mp4';
+    })();
 
-        h.attachMedia(video);
+    vjsPlayer = videojs(video, {
+        techOrder: ['html5'],
+        html5: { hls: { overrideNative: !videojs.browser.IS_SAFARI } },
+        autoplay: true,
+        controls: false,   // We use our own custom controls
+        preload: 'auto',
+        responsive: false,
+        fluid: false,
+        fill: true,
+        sources: [{ src: url, type: mimeType }],
+    });
 
-        video.addEventListener('loadedmetadata', () => restoreVideoProgress(), {once:true});
-        video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); video.play().catch(() => {}); }, {once:true});
-    }
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        isHlsJsMode = false;
-        showLoader();
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-            renderTracksMenu(); hideLoader(); setupInactivityDetection();
-            restoreVideoProgress(); startProgressSaving();
-            video.play().catch(() => {});
-        }, {once:true});
-    }
-    else {
-        displayError('Browser does not support HLS');
+    vjsPlayer.on('loadedmetadata', () => {
+        renderTracksMenu();
+        restoreVideoProgress();
+    });
+
+    vjsPlayer.on('canplay', () => {
         hideLoader();
-    }
+        setupInactivityDetection();
+        startProgressSaving();
+        vjsPlayer.play().catch(() => {});
+    });
+
+    vjsPlayer.on('error', () => {
+        const err = vjsPlayer.error();
+        displayError('Video error: ' + (err ? err.message : 'unknown'));
+        hideLoader();
+    });
+
+    vjsPlayer.on('audiotrackchange', renderTracksMenu);
+    vjsPlayer.on('texttrackchange', renderTracksMenu);
 }
 
 /* -------------------------------------------------------------------------
