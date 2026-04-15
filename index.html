@@ -385,6 +385,202 @@
           .report-modal-title { font-size: 16px; }
           .report-issue-btn { width: 100%; }
         }
+
+        /* ---- Episode Selector Panel ---- */
+        #ep-selector-panel {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            z-index: 60;
+            display: none;
+            flex-direction: column;
+            animation: epPanelFadeIn .2s ease;
+        }
+        #ep-selector-panel.open {
+            display: flex;
+        }
+        @keyframes epPanelFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        .ep-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 28px 0;
+            flex-shrink: 0;
+        }
+        .ep-panel-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -.01em;
+        }
+        .ep-panel-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            transition: background .15s, color .15s;
+            flex-shrink: 0;
+        }
+        .ep-panel-close:hover { background: rgba(255,255,255,.12); color: #fff; }
+        .ep-season-row {
+            padding: 14px 28px 16px;
+            flex-shrink: 0;
+        }
+        .ep-season-select {
+            background: #2a2a2a;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 7px 38px 7px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23ccc' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            font-family: 'Netflix Sans', sans-serif;
+        }
+        .ep-season-select:focus { outline: none; }
+        .ep-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .ep-list::-webkit-scrollbar { width: 4px; }
+        .ep-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+        .ep-list::-webkit-scrollbar-track { background: transparent; }
+        .ep-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background .15s;
+            position: relative;
+        }
+        .ep-row:hover { background: rgba(255,255,255,.08); }
+        .ep-row.ep-active { background: rgba(255,255,255,.06); }
+        .ep-thumb-wrap {
+            position: relative;
+            flex-shrink: 0;
+            width: 130px;
+            height: 73px;
+            background: #141414;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .ep-thumb-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .ep-thumb-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+        }
+        .ep-progress-wrap {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255,255,255,.25);
+        }
+        .ep-progress-fill {
+            height: 100%;
+            background: rgb(225,0,0);
+        }
+        .ep-play-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity .15s;
+            background: rgba(0,0,0,.35);
+        }
+        .ep-row:hover .ep-play-overlay,
+        .ep-row.ep-active .ep-play-overlay { opacity: 1; }
+        .ep-play-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.5);
+        }
+        .ep-info { flex: 1; min-width: 0; }
+        .ep-now-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgb(225,0,0);
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            margin-bottom: 3px;
+            display: block;
+        }
+        .ep-top {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .ep-num-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 78%;
+        }
+        .ep-duration {
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+            font-weight: 400;
+        }
+        .ep-desc {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        @media (max-width: 600px) {
+            .ep-thumb-wrap { width: 100px; height: 56px; }
+            .ep-panel-header { padding: 16px 16px 0; }
+            .ep-season-row { padding: 10px 16px 12px; }
+            .ep-list { padding: 0 8px 16px; }
+            .ep-num-title { font-size: 13px; }
+            .ep-desc { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -572,6 +768,16 @@
                 </div>
 
                 <div id="right-controlbuttons" class="flex items-center space-x-1 md:space-x-2 relative">
+                    <!-- Episodes Selector -->
+                    <button id="episodes-button"
+                            class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none mobile-labeled-btn hidden"
+                            title="Episodes"
+                            onclick="openEpPanel()">
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="w-6 h-6 md:w-full md:h-full flex-shrink-0">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 5a1 1 0 0 1 1-1h16a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 7a1 1 0 0 1 1-1h16a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 7a1 1 0 0 1 1-1h16a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z" fill="currentColor"/>
+                        </svg>
+                        <span class="mobile-btn-label">Episodes</span>
+                    </button>
                     <!-- Next Episode -->
                     <button id="next-episode-button"
                             class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none mobile-labeled-btn"
@@ -672,6 +878,20 @@
 
     <div id="error-message"
          class="absolute top-0 right-0 m-4 p-3 bg-red-800 text-white text-sm rounded-lg shadow-xl hidden z-30"></div>
+
+    <!-- Episode Selector Panel -->
+    <div id="ep-selector-panel">
+        <div class="ep-panel-header">
+            <div class="ep-panel-title" id="ep-panel-show-title">Episodes</div>
+            <button class="ep-panel-close" onclick="closeEpPanel()" title="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="ep-season-row">
+            <select class="ep-season-select" id="ep-season-select" onchange="epChangeSeason(this.value)"></select>
+        </div>
+        <div class="ep-list" id="ep-list"></div>
+    </div>
 
     <!-- Report Issue Modal (inside video-container so it works in fullscreen) -->
     <div class="report-modal" id="reportModal">
@@ -1741,6 +1961,11 @@ async function playMovie(movieId) {
    ------------------------------------------------------------------------- */
 async function playEpisode(seriesId, seasonNumber, episodeNumber) {
     _revokeAllSubtitleBlobs();
+    // Sync episode selector state
+    _epCurrentSeries = String(seriesId);
+    _epCurrentSeason = parseInt(seasonNumber);
+    _epCurrentEp     = parseInt(episodeNumber);
+    _epSeasonCache   = {}; // clear cache so re-render fetches fresh
     const expectedPath = `/tv/${seriesId}/S${seasonNumber}/E${episodeNumber}`;
     if (window.location.pathname !== expectedPath) {
         history.replaceState(null, '', expectedPath);
@@ -2030,7 +2255,195 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
     }
 }
 
-window.onload = () => { setupUIControls(); resolveAndPlay(); };
+/* -------------------------------------------------------------------------
+   EPISODE SELECTOR PANEL
+   ------------------------------------------------------------------------- */
+const _epPanel      = document.getElementById('ep-selector-panel');
+const _epList       = document.getElementById('ep-list');
+const _epSeasonSel  = document.getElementById('ep-season-select');
+const _epShowTitle  = document.getElementById('ep-panel-show-title');
+const _epsButton    = document.getElementById('episodes-button');
+
+let _epSeasonCache  = {};   // season -> episode array
+let _epCurrentSeries = null;
+let _epCurrentSeason = null;
+let _epCurrentEp     = null;
+let _epTotalSeasons  = 1;
+let _epPanelOpen     = false;
+
+const THUMB_GRADIENTS = [
+    '#0d1b2a,#1a3a52','#1a0a0a,#2a1010','#0d1a05,#1a2a0d',
+    '#1a050d,#2a0d1a','#0d0d1a,#1a1a2a','#1a1205,#2a200a'
+];
+
+function openEpPanel() {
+    if (!_epCurrentSeries) return;
+    _epPanelOpen = true;
+    _epPanel.classList.add('open');
+    clearTimeout(inactivityTimer);
+    renderEpSeasonDropdown();
+    renderEpList(_epCurrentSeason);
+}
+
+function closeEpPanel() {
+    _epPanelOpen = false;
+    _epPanel.classList.remove('open');
+    resetInactivityTimer();
+}
+
+function epChangeSeason(val) {
+    _epCurrentSeason = parseInt(val);
+    renderEpList(_epCurrentSeason);
+}
+
+function renderEpSeasonDropdown() {
+    _epSeasonSel.innerHTML = '';
+    for (let s = 1; s <= _epTotalSeasons; s++) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = `Season ${s}`;
+        if (s === _epCurrentSeason) opt.selected = true;
+        _epSeasonSel.appendChild(opt);
+    }
+}
+
+async function renderEpList(season) {
+    _epList.innerHTML = '<div style="color:#666;padding:20px 8px;font-size:13px;">Loading episodes…</div>';
+
+    let eps = _epSeasonCache[season];
+    if (!eps) {
+        try {
+            const url = `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${_epCurrentSeries}/S${season}.json`;
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) throw new Error('not found');
+            const data = await res.json();
+            // data is { "1": "url", "2": "url", ... }
+            eps = Object.entries(data)
+                .filter(([k]) => !isNaN(parseInt(k)))
+                .map(([k, v]) => ({ n: parseInt(k), url: v }))
+                .sort((a, b) => a.n - b.n);
+            _epSeasonCache[season] = eps;
+        } catch(e) {
+            _epList.innerHTML = '<div style="color:#666;padding:20px 8px;font-size:13px;">No episodes found for this season.</div>';
+            return;
+        }
+    }
+
+    // Fetch TMDB episode details in parallel for titles/descriptions
+    let tmdbEps = {};
+    try {
+        const res = await fetch(`${TMDB_PROXY}/tv/${_epCurrentSeries}/season/${season}`);
+        if (res.ok) {
+            const data = await res.json();
+            (data.episodes || []).forEach(ep => { tmdbEps[ep.episode_number] = ep; });
+        }
+    } catch(e) { /* silent — titles optional */ }
+
+    _epList.innerHTML = '';
+    eps.forEach(ep => {
+        const isActive = season === _epCurrentSeason && ep.n === _epCurrentEp;
+        const tmdb = tmdbEps[ep.n] || {};
+        const title = tmdb.name || `Episode ${ep.n}`;
+        const desc  = tmdb.overview || '';
+        const runtime = tmdb.runtime ? `${tmdb.runtime}m` : '';
+        const stillUrl = tmdb.still_path
+            ? `https://image.tmdb.org/t/p/w300${tmdb.still_path}`
+            : null;
+
+        const grad = THUMB_GRADIENTS[(ep.n - 1) % THUMB_GRADIENTS.length];
+        const [g1, g2] = grad.split(',');
+
+        const row = document.createElement('div');
+        row.className = 'ep-row' + (isActive ? ' ep-active' : '');
+
+        row.innerHTML = `
+            <div class="ep-thumb-wrap">
+                ${stillUrl
+                    ? `<img src="${stillUrl}" alt="Episode ${ep.n}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+                    : ''}
+                <div class="ep-thumb-placeholder" style="display:${stillUrl ? 'none' : 'flex'};background:linear-gradient(135deg,${g1},${g2})">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="ep-play-overlay">
+                    <div class="ep-play-circle">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="ep-info">
+                ${isActive ? '<span class="ep-now-badge">Now Playing</span>' : ''}
+                <div class="ep-top">
+                    <div class="ep-num-title">${ep.n}. ${title}</div>
+                    ${runtime ? `<div class="ep-duration">${runtime}</div>` : ''}
+                </div>
+                ${desc ? `<div class="ep-desc">${desc}</div>` : ''}
+            </div>
+        `;
+
+        row.addEventListener('click', () => {
+            _epCurrentSeason = season;
+            _epCurrentEp     = ep.n;
+            history.replaceState(null, '', `/tv/${_epCurrentSeries}/S${season}/E${ep.n}`);
+            playEpisode(_epCurrentSeries, season, ep.n);
+            closeEpPanel();
+            updateNextEpisodeButtonVisibility();
+        });
+
+        _epList.appendChild(row);
+    });
+
+    // Scroll active into view
+    setTimeout(() => {
+        const active = _epList.querySelector('.ep-active');
+        if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 80);
+}
+
+async function initEpSelector() {
+    const path = window.location.pathname;
+    const tvMatch = path.match(/\/tv\/(\d+)\/S(\d+)\/E(\d+)/i);
+    if (!tvMatch) {
+        _epsButton.classList.add('hidden');
+        return;
+    }
+
+    _epCurrentSeries = tvMatch[1];
+    _epCurrentSeason = parseInt(tvMatch[2]);
+    _epCurrentEp     = parseInt(tvMatch[3]);
+
+    // Count seasons by probing (up to 20)
+    _epTotalSeasons = _epCurrentSeason;
+    (async () => {
+        for (let s = _epCurrentSeason + 1; s <= 20; s++) {
+            try {
+                const r = await fetch(
+                    `https://raw.githubusercontent.com/Watchout2025/api/refs/heads/main/hls/tv/${_epCurrentSeries}/S${s}.json`,
+                    { cache: 'no-store', method: 'HEAD' }
+                );
+                if (!r.ok) break;
+                _epTotalSeasons = s;
+            } catch(e) { break; }
+        }
+    })();
+
+    // Fetch show title
+    try {
+        const res = await fetch(`${TMDB_PROXY}/tv/${_epCurrentSeries}`);
+        if (res.ok) {
+            const data = await res.json();
+            _epShowTitle.textContent = data.name || 'Episodes';
+        }
+    } catch(e) { /* silent */ }
+
+    _epsButton.classList.remove('hidden');
+
+    // Close panel on Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && _epPanelOpen) { e.stopPropagation(); closeEpPanel(); }
+    }, true);
+}
+
+window.onload = () => { setupUIControls(); resolveAndPlay(); initEpSelector(); };
 
 /* -------------------------------------------------------------------------
    REPORT ISSUE MODAL
