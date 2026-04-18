@@ -1676,6 +1676,23 @@ function initHlsPlayer(url) {
         h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
+
+        // Fix HLS subtitle cue position — browser native renderer ignores ::cue CSS,
+        // so we override every cue to match the line:85% positioning used by SRT→VTT conversion.
+        h.on(Hls.Events.CUES_PARSED, (event, data) => {
+            if (!data || !data.cues) return;
+            data.cues.forEach(cue => {
+                if (cue.line === 'auto' || cue.line === -1 || cue.line === undefined) {
+                    cue.line = 85;
+                    cue.snapToLines = false;
+                }
+                cue.position = 50;
+                cue.align = 'center';
+                cue.positionAlign = 'center';
+                if (cue.background !== undefined) cue.background = 'transparent';
+                if (!cue.size || cue.size === 100) cue.size = 80;
+            });
+        });
         h.on(Hls.Events.ERROR, (ev, data) => {
             if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
         });
