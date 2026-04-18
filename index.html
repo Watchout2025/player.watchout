@@ -204,6 +204,20 @@
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
+        /* ---- Custom subtitle overlay ---- */
+        #custom-subtitle-overlay span {
+            display: inline-block;
+            background: transparent;
+            color: #fff;
+            font-family: 'Netflix Sans', sans-serif;
+            font-size: clamp(14px, 2.2vw, 28px);
+            font-weight: 400;
+            line-height: 1.5;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
         /* ---- Netflix-style subtitles ---- */
         ::cue {
             background: transparent;
@@ -399,6 +413,17 @@
     <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
         <img src="https://assets.nflxext.com/en_us/pages/wiplayer/site-spinner.png" class="w-20 h-20 rounded-full shadow-lg" alt="Loading">
     </div>
+
+    <!-- Custom subtitle overlay (replaces broken native renderer for HLS cues) -->
+    <div id="custom-subtitle-overlay" style="
+        position:absolute;
+        bottom:90px;
+        left:0;right:0;
+        text-align:center;
+        pointer-events:none;
+        z-index:15;
+        padding:0 5%;
+    "></div>
 
     <div id="top-overlay" class="absolute inset-0 cursor-pointer z-10"></div>
 
@@ -1627,6 +1652,8 @@ function initHlsPlayer(url) {
         saveProgressInterval = null;
     }
 
+    stopCustomCueRenderer();
+
     // Tear down any existing HLS instance cleanly before starting a new one.
     // This prevents the old instance from firing fatal error events mid-swap.
     stopProgressSaving();
@@ -1667,8 +1694,8 @@ function initHlsPlayer(url) {
         isHlsJsMode = true;
         showLoader();
         const h = new Hls({
-            renderTextTracksNatively: true,
-            subtitleDisplay: true,
+            renderTextTracksNatively: false,
+            subtitleDisplay: false,
         });
         hlsInstance = h;
 
@@ -1676,28 +1703,12 @@ function initHlsPlayer(url) {
         h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
-
-        // Fix HLS subtitle cue position — browser native renderer ignores ::cue CSS,
-        // so we override every cue to match the line:85% positioning used by SRT→VTT conversion.
-        h.on(Hls.Events.CUES_PARSED, (event, data) => {
-            if (!data || !data.cues) return;
-            data.cues.forEach(cue => {
-                if (cue.line === 'auto' || cue.line === -1 || cue.line === undefined) {
-                    cue.line = 85;
-                    cue.snapToLines = false;
-                }
-                cue.position = 50;
-                cue.align = 'center';
-                cue.positionAlign = 'center';
-                if (cue.background !== undefined) cue.background = 'transparent';
-                if (!cue.size || cue.size === 100) cue.size = 80;
-            });
-        });
         h.on(Hls.Events.ERROR, (ev, data) => {
             if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
         });
 
         h.attachMedia(video);
+        startCustomCueRenderer();
 
         video.addEventListener('loadedmetadata', () => restoreVideoProgress(), {once:true});
         video.addEventListener('canplay', () => { hideLoader(); setupInactivityDetection(); startProgressSaving(); video.play().catch(() => {}); }, {once:true});
@@ -1709,6 +1720,7 @@ function initHlsPlayer(url) {
         video.addEventListener('loadedmetadata', () => {
             renderTracksMenu(); hideLoader(); setupInactivityDetection();
             restoreVideoProgress(); startProgressSaving();
+            startCustomCueRenderer();
             video.play().catch(() => {});
         }, {once:true});
     }
@@ -2045,6 +2057,54 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
     } catch (e) {
         console.warn('Wyzie subtitle load failed:', e.message);
     }
+}
+
+/* -------------------------------------------------------------------------
+   CUSTOM CUE RENDERER
+   Renders active subtitle cues into #custom-subtitle-overlay so they appear
+   above the controls bar regardless of source (HLS / GitHub / Wyzie).
+   Native rendering is disabled for HLS (subtitleDisplay:false) to avoid the
+   browser placing cues below the progress bar.
+   ------------------------------------------------------------------------- */
+let _cueRafId = null;
+
+function startCustomCueRenderer() {
+    if (_cueRafId) return; // already running
+    const overlay = document.getElementById('custom-subtitle-overlay');
+
+    function renderFrame() {
+        const tracks = video.textTracks ? Array.from(video.textTracks) : [];
+        const activeTrack = tracks.find(t =>
+            (t.kind === 'subtitles' || t.kind === 'captions') && t.mode === 'showing'
+        );
+
+        let text = '';
+        if (activeTrack && activeTrack.activeCues && activeTrack.activeCues.length) {
+            text = Array.from(activeTrack.activeCues)
+                .map(c => c.text ? c.text.replace(/<[^>]+>/g, '') : '')
+                .filter(Boolean)
+                .join('\n');
+        }
+
+        const current = overlay.getAttribute('data-text') || '';
+        if (text !== current) {
+            overlay.setAttribute('data-text', text);
+            overlay.innerHTML = text ? `<span>${text.replace(/\n/g, '<br>')}</span>` : '';
+        }
+
+        _cueRafId = requestAnimationFrame(renderFrame);
+    }
+
+    _cueRafId = requestAnimationFrame(renderFrame);
+}
+
+function stopCustomCueRenderer() {
+    if (_cueRafId) {
+        cancelAnimationFrame(_cueRafId);
+        _cueRafId = null;
+    }
+    const overlay = document.getElementById('custom-subtitle-overlay');
+    if (overlay) { overlay.innerHTML = ''; overlay.removeAttribute('data-text'); }
 }
 
 window.onload = () => { setupUIControls(); resolveAndPlay(); };
