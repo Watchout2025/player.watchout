@@ -214,21 +214,11 @@
             text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7);
             line-height: 1.4;
         }
-        video::cue {
-            background: transparent;
-            color: #fff;
-            font-family: 'Netflix Sans', sans-serif;
-            font-size: 1.1em;
-            font-weight: 400;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7);
-            line-height: 1.4;
-        }
         video::-webkit-media-text-track-display {
             overflow: visible !important;
-            font-size: 1.4rem !important;
         }
-        video::-webkit-media-text-track-display-backdrop {
-            background: transparent !important;
+        video::cue {
+            background: transparent;
         }
         #video {
             --subtitle-bottom-offset: 80px;
@@ -1690,58 +1680,32 @@ function initHlsPlayer(url) {
             if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
         });
 
-        /* ---- Fix HLS native cue positioning ----
-           HLS.js injects cues via native textTracks which ignore ::cue CSS and
-           render at the browser default (bottom edge, tiny). We watch for new cues
-           on every subtitle track and force the same position used by GitHub/Wyzie
-           subtitles: line:85%, position:50%, align:center.                        */
-        function fixHlsCuePositions(track) {
-            function patchCue(cue) {
-                if (!(cue instanceof VTTCue)) return;
-                if (cue.line === 'auto' || cue.line === -1 || cue.line === 100) {
-                    cue.line      = 85;
-                    cue.snapToLines = false;
-                }
-                cue.position  = 50;
-                cue.align     = 'center';
-                cue.size      = 80;
-            }
-            // Patch cues already loaded
-            if (track.cues) Array.from(track.cues).forEach(patchCue);
-            // Patch future cues as they stream in
+        /* Fix HLS cue position — move from browser-default bottom to line:85%
+           (same position used by GitHub/Wyzie subtitles via srtToVtt)            */
+        function fixHlsCueLine(cue) {
+            if (!(cue instanceof VTTCue)) return;
+            cue.line        = 85;
+            cue.snapToLines = false;
+            cue.position    = 50;
+            cue.align       = 'center';
+        }
+        function patchTrackCues(track) {
+            if (track.cues) Array.from(track.cues).forEach(fixHlsCueLine);
             track.addEventListener('cuechange', () => {
-                if (track.cues) Array.from(track.cues).forEach(patchCue);
+                if (track.cues) Array.from(track.cues).forEach(fixHlsCueLine);
             });
-            // Also intercept via MutationObserver-style addCue override if available
-            const origAddCue = track.addCue && track.addCue.bind(track);
-            if (origAddCue) {
-                track.addCue = (cue) => { patchCue(cue); origAddCue(cue); };
+        }
+        video.textTracks.addEventListener('addtrack', e => {
+            const t = e.track;
+            if (t.kind === 'subtitles' || t.kind === 'captions') {
+                // Only patch HLS-native tracks, not our injected GitHub/Wyzie ones
+                const el = Array.from(video.querySelectorAll('track'))
+                    .find(el => el.label === t.label && el.srclang === t.language);
+                if (!el || (!el.hasAttribute('data-github') && !el.hasAttribute('data-wyzie'))) {
+                    patchTrackCues(t);
+                }
             }
-        }
-
-        function attachHlsCueFixer() {
-            Array.from(video.textTracks).forEach(t => {
-                if (t.kind === 'subtitles' || t.kind === 'captions') {
-                    // Only fix HLS-native tracks (no data-github / data-wyzie attr)
-                    const el = Array.from(video.querySelectorAll('track'))
-                        .find(e => e.label === t.label && e.srclang === t.language);
-                    const isInjected = el && (el.hasAttribute('data-github') || el.hasAttribute('data-wyzie'));
-                    if (!isInjected) fixHlsCuePositions(t);
-                }
-            });
-            // Watch for tracks added later (HLS lazy-loads them)
-            video.textTracks.addEventListener('addtrack', e => {
-                const t = e.track;
-                if (t.kind === 'subtitles' || t.kind === 'captions') {
-                    const el = Array.from(video.querySelectorAll('track'))
-                        .find(el => el.label === t.label && el.srclang === t.language);
-                    const isInjected = el && (el.hasAttribute('data-github') || el.hasAttribute('data-wyzie'));
-                    if (!isInjected) fixHlsCuePositions(t);
-                }
-            });
-        }
-
-        h.on(Hls.Events.MANIFEST_PARSED, attachHlsCueFixer);
+        });
 
         h.attachMedia(video);
 
