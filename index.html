@@ -2085,38 +2085,6 @@ reportModal.addEventListener('click', (e) => {
   if (e.target === reportModal) closeReportModal();
 });
 
-function getDeviceType() {
-  const ua = navigator.userAgent;
-  if (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return 'iPad (iPadOS 13+)';
-  if (/iPad/i.test(ua)) return 'iPad';
-  if (/iPhone/i.test(ua)) return 'iPhone';
-  if (/android/i.test(ua) && /mobile/i.test(ua)) return 'Android Phone';
-  if (/android/i.test(ua)) return 'Android Tablet';
-  if (/playbook|silk/i.test(ua)) return 'Kindle/PlayBook Tablet';
-  if (/windows phone/i.test(ua)) return 'Windows Phone';
-  if (/mobile/i.test(ua)) return 'Mobile (Unknown)';
-  if (/macintosh|mac os x/i.test(ua)) return 'Mac';
-  if (/windows/i.test(ua)) return 'Windows PC';
-  if (/linux/i.test(ua)) return 'Linux PC';
-  return 'Desktop (Unknown)';
-}
-
-function getBrowser() {
-  const ua = navigator.userAgent;
-  if (/OPR|Opera/i.test(ua)) return 'Opera';
-  if (/Edg\//i.test(ua)) return 'Edge';
-  if (/Samsung/i.test(ua)) return 'Samsung Internet';
-  if (/UCBrowser/i.test(ua)) return 'UC Browser';
-  if (/YaBrowser/i.test(ua)) return 'Yandex Browser';
-  if (/MiuiBrowser/i.test(ua)) return 'MIUI Browser';
-  if (/DuckDuckGo/i.test(ua)) return 'DuckDuckGo';
-  if (/Brave/i.test(ua)) return 'Brave';
-  if (/Firefox|FxiOS/i.test(ua)) return 'Firefox';
-  if (/CriOS/i.test(ua)) return 'Chrome (iOS)';
-  if (/Chrome/i.test(ua)) return 'Chrome';
-  if (/Safari/i.test(ua)) return 'Safari';
-  return 'Unknown Browser';
-}
 
 async function submitIssue() {
   const type = issueTypeSelect.value;
@@ -2129,9 +2097,7 @@ async function submitIssue() {
       body: JSON.stringify({
         issueType: type,
         description: desc,
-        pageUrl: location.href,
-        deviceType: getDeviceType(),
-        browser: getBrowser()
+        pageUrl: location.href
       })
     });
     if (!res.ok) throw new Error('Failed');
