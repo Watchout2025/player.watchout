@@ -1214,7 +1214,11 @@ function renderTracksMenu() {
             li.addEventListener('click', () => handleTrackSelection('subtitle', originalIdx, isHlsManaged ? hlsIdx : -2));
             subtitleList.appendChild(li);
 
-            track.onchange = renderTracksMenu;
+            // Use a flag to avoid attaching duplicate listeners across re-renders
+            if (!track._menuListenerAttached) {
+                track._menuListenerAttached = true;
+                track.addEventListener('change', renderTracksMenu);
+            }
         });
     }
 }
@@ -1227,15 +1231,22 @@ function handleTrackSelection(type, idx, hlsIdx) {
     } else if (type === 'subtitle') {
         const subs = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
         if (idx === -1) {
+            // Turn off all subtitles
             if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
             subs.forEach(t => t.mode = 'disabled');
         } else if (hlsIdx !== undefined && hlsIdx >= 0) {
+            // HLS-managed track
             if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
-            // Also activate the native textTrack so the browser renders cues
             subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
         } else {
+            // GitHub / Wyzie injected track — disable HLS subtitles first
             if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
-            subs.forEach((t,i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+        }
+        // Safety: ensure no two tracks are simultaneously showing
+        const showingTracks = subs.filter(t => t.mode === 'showing');
+        if (showingTracks.length > 1) {
+            showingTracks.slice(1).forEach(t => { t.mode = 'disabled'; });
         }
     }
     audioSubtitleMenu.classList.add('hidden');
@@ -1951,6 +1962,11 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
 
         // Wait until video element is ready to accept tracks
         const inject = () => {
+            // Remember which textTrack index is currently showing (before we touch the DOM)
+            const allBefore = Array.from(video.textTracks)
+                .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+            const showingBefore = allBefore.findIndex(t => t.mode === 'showing');
+
             // Remove previously injected GitHub tracks
             Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
 
@@ -1964,6 +1980,16 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
                 track.default = false;
                 video.appendChild(track);
             });
+
+            // If a subtitle was already showing before GitHub tracks were (re-)injected,
+            // make sure that same track (by position) stays showing and nothing else does.
+            if (showingBefore !== -1) {
+                const allAfter = Array.from(video.textTracks)
+                    .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+                allAfter.forEach((t, i) => {
+                    t.mode = (i === showingBefore) ? 'showing' : 'disabled';
+                });
+            }
 
             // Re-render the subtitle menu so new tracks appear
             renderTracksMenu();
@@ -2031,6 +2057,12 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
             // Remove previously injected Wyzie tracks before re-injecting
             Array.from(video.querySelectorAll('track[data-wyzie]')).forEach(t => t.remove());
 
+            // Check if a subtitle is already actively showing BEFORE we add new tracks
+            const alreadyShowingIdx = Array.from(video.textTracks)
+                .filter(t => t.kind === 'subtitles' || t.kind === 'captions')
+                .findIndex(t => t.mode === 'showing');
+            const subtitleAlreadyActive = alreadyShowingIdx !== -1;
+
             validTracks.forEach(({ display, lang, blobUrl, isHI }) => {
                 const track = document.createElement('track');
                 track.kind    = 'subtitles';
@@ -2041,6 +2073,16 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
                 track.default = false;
                 video.appendChild(track);
             });
+
+            // If a subtitle was already showing before Wyzie loaded, forcibly
+            // disable all newly added Wyzie textTracks so they don't overlap.
+            if (subtitleAlreadyActive) {
+                Array.from(video.textTracks)
+                    .filter(t => t.kind === 'subtitles' || t.kind === 'captions')
+                    .forEach((t, i) => {
+                        if (i !== alreadyShowingIdx) t.mode = 'disabled';
+                    });
+            }
 
             // Re-render menu so Wyzie tracks appear after HLS + GitHub tracks
             renderTracksMenu();
