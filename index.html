@@ -1198,6 +1198,11 @@ function renderTracksMenu() {
             const hlsIdx = hlsSubTracks.findIndex(h => h.name === track.label || h.lang === track.language);
             const isHlsManaged = source === 'hls' && hlsIdx !== -1;
 
+            // Detect if this is a Wyzie lazy (not-yet-downloaded) track
+            const trackEl = Array.from(video.querySelectorAll('track[data-wyzie]'))
+                .find(el => el.label === track.label && el.srclang === track.language);
+            const isLazy = trackEl && trackEl.hasAttribute('data-lazy-url');
+
             const li = document.createElement('li');
             li.className = `track-selector cursor-pointer flex items-center gap-2 ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
             const check = document.createElement('span');
@@ -1205,7 +1210,9 @@ function renderTracksMenu() {
             check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
             const label = document.createElement('span');
             const displayName = getDisplayName(track, false);
-            label.textContent = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
+            // [ORG] = HLS or GitHub original, lazy Wyzie tracks get no suffix until loaded
+            let labelText = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
+            label.textContent = labelText;
             li.appendChild(check);
             li.appendChild(label);
             li.dataset.index  = originalIdx;
@@ -1228,27 +1235,88 @@ function handleTrackSelection(type, idx, hlsIdx) {
         else if (video.audioTracks) {
             for (let i=0;i<video.audioTracks.length;i++) video.audioTracks[i].enabled = (i===idx);
         }
-    } else if (type === 'subtitle') {
-        const subs = video.textTracks ? Array.from(video.textTracks).filter(t=>t.kind==='subtitles'||t.kind==='captions') : [];
-        if (idx === -1) {
-            // Turn off all subtitles
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
-            subs.forEach(t => t.mode = 'disabled');
-        } else if (hlsIdx !== undefined && hlsIdx >= 0) {
-            // HLS-managed track
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
-            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
-        } else {
-            // GitHub / Wyzie injected track — disable HLS subtitles first
-            if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
-            subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
-        }
-        // Safety: ensure no two tracks are simultaneously showing
-        const showingTracks = subs.filter(t => t.mode === 'showing');
-        if (showingTracks.length > 1) {
-            showingTracks.slice(1).forEach(t => { t.mode = 'disabled'; });
-        }
+        audioSubtitleMenu.classList.add('hidden');
+        renderTracksMenu();
+        resetInactivityTimer();
+        return;
     }
+
+    if (type !== 'subtitle') return;
+
+    const subs = video.textTracks
+        ? Array.from(video.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions')
+        : [];
+
+    // Turn off — no async needed
+    if (idx === -1) {
+        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
+        subs.forEach(t => t.mode = 'disabled');
+        audioSubtitleMenu.classList.add('hidden');
+        renderTracksMenu();
+        resetInactivityTimer();
+        return;
+    }
+
+    // Check if selected track is a lazy (not-yet-loaded) Wyzie track
+    const trackElements = Array.from(video.querySelectorAll('track'));
+    const targetTextTrack = subs[idx];
+    const matchingEl = targetTextTrack
+        ? trackElements.find(el =>
+            el.hasAttribute('data-wyzie') &&
+            el.hasAttribute('data-lazy-url') &&
+            el.label === targetTextTrack.label &&
+            el.srclang === targetTextTrack.language)
+        : null;
+
+    if (matchingEl) {
+        // Wyzie lazy track — disable all others first so nothing overlaps during fetch
+        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
+        subs.forEach(t => { t.mode = 'disabled'; });
+
+        // Show a loading indicator on the menu item (keep menu open)
+        const menuItems = document.querySelectorAll('#subtitle-list .track-selector');
+        menuItems.forEach((li, i) => {
+            // +1 because index 0 is the "Off" item
+            if (parseInt(li.dataset.index) === idx) {
+                li.style.opacity = '0.5';
+                li.style.pointerEvents = 'none';
+                const lbl = li.querySelector('span:last-child');
+                if (lbl) lbl.textContent += ' (loading…)';
+            }
+        });
+
+        // Fetch the SRT file now that the user has actually asked for it
+        fetchAndActivateWyzieTrack(matchingEl).then(ok => {
+            if (ok) {
+                // Now that the <track> has a real src, activate its textTrack
+                const freshSubs = Array.from(video.textTracks)
+                    .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+                freshSubs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+                // Safety check
+                const showing = freshSubs.filter(t => t.mode === 'showing');
+                if (showing.length > 1) showing.slice(1).forEach(t => { t.mode = 'disabled'; });
+            }
+            audioSubtitleMenu.classList.add('hidden');
+            renderTracksMenu();
+            resetInactivityTimer();
+        });
+        return; // exit — async path handles the rest
+    }
+
+    // HLS-managed track
+    if (hlsIdx !== undefined && hlsIdx >= 0) {
+        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = hlsIdx;
+        subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+    } else {
+        // GitHub or already-loaded Wyzie track
+        if (isHlsJsMode && hlsInstance) hlsInstance.subtitleTrack = -1;
+        subs.forEach((t, i) => { t.mode = (i === idx) ? 'showing' : 'disabled'; });
+    }
+
+    // Safety: ensure no two tracks are simultaneously showing
+    const showingTracks = subs.filter(t => t.mode === 'showing');
+    if (showingTracks.length > 1) showingTracks.slice(1).forEach(t => { t.mode = 'disabled'; });
+
     audioSubtitleMenu.classList.add('hidden');
     renderTracksMenu();
     resetInactivityTimer();
@@ -2010,13 +2078,39 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
 /* -------------------------------------------------------------------------
    SUBTITLES FROM WYZIE (OpenSubtitles proxy)
    Priority order in menu: HLS → GitHub → Wyzie
+
+   LAZY LOADING: Only the Wyzie search API is called on page load to get
+   the track list. Actual SRT files are only fetched when the user clicks
+   a Wyzie subtitle. This avoids downloading 10–20 subtitle files upfront
+   and makes tracks appear in the menu immediately.
    ------------------------------------------------------------------------- */
 const WYZIE_API    = 'https://sub.wyzie.io/search';
 const WYZIE_KEY    = 'wyzie-ea127adc7693d78810f9cf157f267ea0';
 
+async function fetchAndActivateWyzieTrack(trackEl) {
+    const lazyUrl = trackEl.getAttribute('data-lazy-url');
+    if (!lazyUrl) return true; // already loaded
+
+    try {
+        const srtRes = await fetch(lazyUrl, { cache: 'no-store' });
+        if (!srtRes.ok) throw new Error(`HTTP ${srtRes.status}`);
+        const srtText = await srtRes.text();
+        const vttText = srtToVtt(srtText);
+        const blob    = new Blob([vttText], { type: 'text/vtt;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        _subtitleBlobUrls.push(blobUrl);
+        trackEl.src = blobUrl;
+        trackEl.removeAttribute('data-lazy-url');
+        return true;
+    } catch (err) {
+        console.warn('Wyzie lazy fetch failed:', err.message);
+        return false;
+    }
+}
+
 async function loadSubtitlesFromWyzie(type, id, season, episode) {
     try {
-        // Build query URL
+        // Build query URL — metadata only, SRT files fetched lazily on selection
         let apiUrl = `${WYZIE_API}?id=${id}&key=${WYZIE_KEY}`;
         if (type === 'tv') {
             apiUrl += `&season=${season}&episode=${episode}`;
@@ -2028,63 +2122,35 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
         const tracks = await res.json();
         if (!Array.isArray(tracks) || !tracks.length) return;
 
-        // Fetch all SRT files in parallel and convert to VTT blob URLs
-        const trackData = await Promise.all(tracks.map(async (track) => {
-            try {
-                const srtRes = await fetch(track.url, { cache: 'no-store' });
-                if (!srtRes.ok) return null;
-                const srtText = await srtRes.text();
-                const vttText = srtToVtt(srtText);
-                const blob    = new Blob([vttText], { type: 'text/vtt;charset=utf-8' });
-                const blobUrl = URL.createObjectURL(blob);
-                _subtitleBlobUrls.push(blobUrl);
-                return {
-                    display : track.display || track.language,
-                    lang    : track.language,
-                    blobUrl,
-                    isHI    : track.isHearingImpaired || false,
-                };
-            } catch (err) {
-                console.warn(`Wyzie: failed to load subtitle for ${track.language}:`, err.message);
-                return null;
-            }
-        }));
-
-        const validTracks = trackData.filter(Boolean);
-        if (!validTracks.length) return;
-
+        // Inject placeholder <track> elements immediately — no SRT fetch yet.
+        // The actual SRT is downloaded only when the user selects a track.
         const inject = () => {
             // Remove previously injected Wyzie tracks before re-injecting
             Array.from(video.querySelectorAll('track[data-wyzie]')).forEach(t => t.remove());
 
-            // Check if a subtitle is already actively showing BEFORE we add new tracks
-            const alreadyShowingIdx = Array.from(video.textTracks)
-                .filter(t => t.kind === 'subtitles' || t.kind === 'captions')
-                .findIndex(t => t.mode === 'showing');
-            const subtitleAlreadyActive = alreadyShowingIdx !== -1;
-
-            validTracks.forEach(({ display, lang, blobUrl, isHI }) => {
-                const track = document.createElement('track');
-                track.kind    = 'subtitles';
-                track.label   = display + (isHI ? ' [CC]' : '');
-                track.srclang = lang;
-                track.src     = blobUrl;
-                track.setAttribute('data-wyzie', '1');
-                track.default = false;
-                video.appendChild(track);
+            tracks.forEach((track) => {
+                const el = document.createElement('track');
+                el.kind    = 'subtitles';
+                el.label   = (track.display || track.language) + (track.isHearingImpaired ? ' [CC]' : '');
+                el.srclang = track.language;
+                // Do NOT set el.src — store the SRT URL for lazy loading on selection
+                el.setAttribute('data-wyzie', '1');
+                el.setAttribute('data-lazy-url', track.url);
+                el.default = false;
+                video.appendChild(el);
             });
 
-            // If a subtitle was already showing before Wyzie loaded, forcibly
-            // disable all newly added Wyzie textTracks so they don't overlap.
-            if (subtitleAlreadyActive) {
-                Array.from(video.textTracks)
-                    .filter(t => t.kind === 'subtitles' || t.kind === 'captions')
-                    .forEach((t, i) => {
-                        if (i !== alreadyShowingIdx) t.mode = 'disabled';
-                    });
-            }
+            // Tracks have no src so the browser won't auto-activate them,
+            // but defensively mark any that slipped through as disabled.
+            Array.from(video.textTracks)
+                .filter(t => t.kind === 'subtitles' || t.kind === 'captions')
+                .forEach(t => {
+                    const el = Array.from(video.querySelectorAll('track[data-wyzie]'))
+                        .find(el => el.label === t.label && el.srclang === t.language);
+                    if (el && el.hasAttribute('data-lazy-url')) t.mode = 'disabled';
+                });
 
-            // Re-render menu so Wyzie tracks appear after HLS + GitHub tracks
+            // Re-render menu so Wyzie tracks appear immediately after GitHub tracks
             renderTracksMenu();
         };
 
