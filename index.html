@@ -1185,8 +1185,7 @@ function renderTracksMenu() {
 
     if (!sortedTracks.length) {
         subtitleList.innerHTML += '<li class="text-gray-400">No subtitle tracks found.</li>';
-    } else {
-        let lastSource = null;
+    } else {        let lastSource = null;
         sortedTracks.forEach(({ track, originalIdx, source }) => {
             const selected = track.mode === 'showing';
 
@@ -1227,6 +1226,16 @@ function renderTracksMenu() {
                 track.addEventListener('change', renderTracksMenu);
             }
         });
+    }
+
+    // Show Wyzie loading state at the bottom of the subtitle list
+    const hasWyzieTracks = sortedTracks.some(t => t.source === 'wyzie');
+    if (_wyzieLoading && !hasWyzieTracks) {
+        const li = document.createElement('li');
+        li.className = 'text-gray-400 flex items-center gap-2';
+        li.style.cssText = 'padding: 6px 10px; font-size: 0.85em;';
+        li.innerHTML = `<svg style="flex-shrink:0;animation:spin 1s linear infinite" width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.3" d="M12 2a10 10 0 1 0 10 10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg> Loading subtitles…`;
+        subtitleList.appendChild(li);
     }
 }
 function handleTrackSelection(type, idx, hlsIdx) {
@@ -1735,7 +1744,9 @@ function initHlsPlayer(url) {
             video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
+            const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
             displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
+            autoReportBrokenLink(detail);
             hideLoader();
         }, {once:true});
         return;
@@ -1756,7 +1767,13 @@ function initHlsPlayer(url) {
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.ERROR, (ev, data) => {
-            if (data.fatal) { displayError('Fatal HLS error'); h.destroy(); hideLoader(); }
+            if (data.fatal) {
+                const detail = `type=${data.type} details=${data.details}`;
+                displayError('Fatal HLS error');
+                autoReportBrokenLink(detail);
+                h.destroy();
+                hideLoader();
+            }
         });
 
         /* Fix HLS cue position — move from browser-default bottom to line:85%
@@ -1799,6 +1816,12 @@ function initHlsPlayer(url) {
             renderTracksMenu(); hideLoader(); setupInactivityDetection();
             restoreVideoProgress(); startProgressSaving();
             video.play().catch(() => {});
+        }, {once:true});
+        video.addEventListener('error', () => {
+            const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
+            displayError('Failed to load stream: ' + (video.error ? video.error.message : 'unknown error'));
+            autoReportBrokenLink(detail);
+            hideLoader();
         }, {once:true});
     }
     else {
@@ -1936,6 +1959,7 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const label      = `S${season}:E${episode}`;
             const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
             const mobileTitle = `${label} "${epName || seriesName}"`;
+            window._seriesReportTitle = `${seriesName} ${label}`.trim();
             document.getElementById('title-main-text').textContent = fullTitle;
             document.getElementById('mobile-title-main').textContent = mobileTitle;
             document.title = fullTitle || document.title;
@@ -2108,7 +2132,11 @@ async function fetchAndActivateWyzieTrack(trackEl) {
     }
 }
 
+let _wyzieLoading = false;
+
 async function loadSubtitlesFromWyzie(type, id, season, episode) {
+    _wyzieLoading = true;
+    renderTracksMenu(); // immediately show loading state in menu if already open
     try {
         // Build query URL — metadata only, SRT files fetched lazily on selection
         let apiUrl = `${WYZIE_API}?id=${id}&key=${WYZIE_KEY}`;
@@ -2117,10 +2145,10 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
         }
 
         const res = await fetch(apiUrl, { cache: 'no-store' });
-        if (!res.ok) return; // Silent fail — subtitles are optional
+        if (!res.ok) { _wyzieLoading = false; renderTracksMenu(); return; }
 
         const tracks = await res.json();
-        if (!Array.isArray(tracks) || !tracks.length) return;
+        if (!Array.isArray(tracks) || !tracks.length) { _wyzieLoading = false; renderTracksMenu(); return; }
 
         // Inject placeholder <track> elements immediately — no SRT fetch yet.
         // The actual SRT is downloaded only when the user selects a track.
@@ -2151,6 +2179,7 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
                 });
 
             // Re-render menu so Wyzie tracks appear immediately after GitHub tracks
+            _wyzieLoading = false;
             renderTracksMenu();
         };
 
@@ -2161,6 +2190,8 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
         }
 
     } catch (e) {
+        _wyzieLoading = false;
+        renderTracksMenu();
         console.warn('Wyzie subtitle load failed:', e.message);
     }
 }
@@ -2193,6 +2224,54 @@ reportModal.addEventListener('click', (e) => {
   if (e.target === reportModal) closeReportModal();
 });
 
+
+/* -------------------------------------------------------------------------
+   AUTO-REPORT BROKEN LINK
+   Called automatically on any fatal HLS / video playback error.
+   Silent — no UI shown to the user. Deduped per URL per session.
+   ------------------------------------------------------------------------- */
+const _autoReportedUrls = new Set();
+
+async function autoReportBrokenLink(errorDetail) {
+    const reportUrl = resolvedUrl || location.href;
+    if (_autoReportedUrls.has(reportUrl)) return; // don't spam duplicates
+    _autoReportedUrls.add(reportUrl);
+
+    const media = getMediaInfoFromUrl();
+    const pageTitle = document.title || '';
+
+    let description = '[Auto-reported] Broken stream detected.\n\n';
+
+    if (media.mediaType === 'tv') {
+        const tvTitle = window._seriesReportTitle || pageTitle;
+        description += `TV Show  : ${tvTitle}\n`;
+    } else if (media.mediaType === 'movie') {
+        description +=
+            `Movie    : ${pageTitle}\n`;
+    } else {
+        description += `Title    : ${pageTitle}\n`;
+    }
+
+    description +=
+        `Page URL : ${location.href}\n` +
+        `Stream   : ${reportUrl}\n` +
+        `Error    : ${errorDetail || 'unknown'}`;
+
+    try {
+        await fetch('https://report.bingeoutofficial.workers.dev', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                issueType: 'video',
+                description,
+                pageUrl: location.href,
+            })
+        });
+    } catch (e) {
+        // Silent — reporting failure must never surface to the user
+        console.warn('Auto-report failed:', e.message);
+    }
+}
 
 async function submitIssue() {
   const type = issueTypeSelect.value;
