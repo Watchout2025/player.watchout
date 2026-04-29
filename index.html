@@ -1755,11 +1755,8 @@ function initHlsPlayer(url) {
             video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
-            // Only report if the video never loaded at all (readyState 0 = nothing loaded)
-            if (video.readyState > 0) return;
-            const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
+            if (video.currentTime > 0 || video.readyState >= 2) return;
             displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
-            autoReportBrokenLink(detail);
             hideLoader();
         }, {once:true});
         return;
@@ -1781,13 +1778,7 @@ function initHlsPlayer(url) {
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.ERROR, (ev, data) => {
             if (data.fatal) {
-                const detail = `type=${data.type} details=${data.details}`;
                 displayError('Fatal HLS error');
-                if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
-                    data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
-                    data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR) {
-                    autoReportBrokenLink(detail);
-                }
                 h.destroy();
                 hideLoader();
             }
@@ -1835,9 +1826,7 @@ function initHlsPlayer(url) {
             video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
-            // Ignore non-fatal errors that fire while video is already playing fine
             if (video.currentTime > 0 && !video.paused) return;
-            const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
             displayError('Failed to load stream: ' + (video.error ? video.error.message : 'unknown error'));
             hideLoader();
         }, {once:true});
@@ -1977,7 +1966,6 @@ async function fetchAndSetTitle(type, id, season, episode) {
             const label      = `S${season}:E${episode}`;
             const fullTitle  = [seriesName, label, epName].filter(Boolean).join(' ');
             const mobileTitle = `${label} "${epName || seriesName}"`;
-            window._seriesReportTitle = `${seriesName} ${label}`.trim();
             document.getElementById('title-main-text').textContent = fullTitle;
             document.getElementById('mobile-title-main').textContent = mobileTitle;
             document.title = fullTitle || document.title;
@@ -2243,52 +2231,7 @@ reportModal.addEventListener('click', (e) => {
 });
 
 
-/* -------------------------------------------------------------------------
-   AUTO-REPORT BROKEN LINK
-   Called automatically on any fatal HLS / video playback error.
-   Silent — no UI shown to the user. Deduped per URL per session.
-   ------------------------------------------------------------------------- */
-const _autoReportedUrls = new Set();
 
-async function autoReportBrokenLink(errorDetail) {
-    const reportUrl = resolvedUrl || location.href;
-    if (_autoReportedUrls.has(reportUrl)) return; // don't spam duplicates
-    _autoReportedUrls.add(reportUrl);
-
-    const media = getMediaInfoFromUrl();
-    const pageTitle = document.title || '';
-
-    let description = '[Auto-reported] Broken stream detected.\n\n';
-
-    if (media.mediaType === 'tv') {
-        const tvTitle = window._seriesReportTitle || pageTitle;
-        description += `TV Show  : ${tvTitle}\n`;
-    } else if (media.mediaType === 'movie') {
-        description +=
-            `Movie    : ${pageTitle}\n`;
-    } else {
-        description += `Title    : ${pageTitle}\n`;
-    }
-
-    description +=
-        `Stream   : ${reportUrl}\n` +
-        `Error    : ${errorDetail || 'unknown'}`;
-
-    try {
-        await fetch('https://report.bingeoutofficial.workers.dev', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                issueType: 'video',
-                description,
-                pageUrl: location.href,
-            })
-        });
-    } catch (e) {
-        // Silent — reporting failure must never surface to the user
-        console.warn('Auto-report failed:', e.message);
-    }
-}
 
 async function submitIssue() {
   const type = issueTypeSelect.value;
