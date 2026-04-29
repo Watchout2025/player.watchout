@@ -1755,6 +1755,8 @@ function initHlsPlayer(url) {
             video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
+            // Only report if the video never loaded at all (readyState 0 = nothing loaded)
+            if (video.readyState > 0) return;
             const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
             displayError('Failed to load video: ' + (video.error ? video.error.message : 'unknown error'));
             autoReportBrokenLink(detail);
@@ -1781,7 +1783,11 @@ function initHlsPlayer(url) {
             if (data.fatal) {
                 const detail = `type=${data.type} details=${data.details}`;
                 displayError('Fatal HLS error');
-                autoReportBrokenLink(detail);
+                if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+                    data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+                    data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR) {
+                    autoReportBrokenLink(detail);
+                }
                 h.destroy();
                 hideLoader();
             }
@@ -1829,9 +1835,10 @@ function initHlsPlayer(url) {
             video.play().catch(() => {});
         }, {once:true});
         video.addEventListener('error', () => {
+            // Ignore non-fatal errors that fire while video is already playing fine
+            if (video.currentTime > 0 && !video.paused) return;
             const detail = video.error ? `code=${video.error.code} ${video.error.message}` : 'unknown';
             displayError('Failed to load stream: ' + (video.error ? video.error.message : 'unknown error'));
-            autoReportBrokenLink(detail);
             hideLoader();
         }, {once:true});
     }
