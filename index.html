@@ -1747,6 +1747,7 @@ function initHlsPlayer(url) {
     /* ---- Direct video file (MP4, WebM, etc.) ---- */
     if (isDirectVideoUrl(url)) {
         isHlsJsMode = false;
+        video.removeAttribute('crossorigin');
         showLoader();
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
