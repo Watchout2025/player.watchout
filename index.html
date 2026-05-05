@@ -1766,7 +1766,7 @@ function initHlsPlayer(url) {
     /* ---- HLS stream (.m3u8) ---- */
     if (Hls.isSupported()) {
         isHlsJsMode = true;
-        video.setAttribute('crossorigin', '*');
+        video.setAttribute('crossorigin', 'anonymous');
         showLoader();
         const h = new Hls({
             renderTextTracksNatively: true,
@@ -1820,7 +1820,7 @@ function initHlsPlayer(url) {
     }
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         isHlsJsMode = false;
-        video.setAttribute('crossorigin', '*');
+        video.setAttribute('crossorigin', 'anonymous');
         showLoader();
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
