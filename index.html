@@ -484,7 +484,7 @@
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     <span id="remaining-time"
-                          class="text-white text-xs md:text-sm font-medium select-none w-10 md:w-12 text-center">-0:00</span>
+                          class="text-white text-xs md:text-sm font-medium select-none w-10 md:w-12 text-center">0:00</span>
                 </div>
             </div>
 
@@ -892,7 +892,7 @@ function updateProgress() {
     const pct = (video.currentTime / video.duration) * 100;
     progressIndicator.style.width = `${pct}%`;
     seekThumb.style.left = `calc(${pct}% - 3px)`;
-    remainingTimeDisplay.textContent = `-${formatTime(video.duration - video.currentTime)}`;
+    remainingTimeDisplay.textContent = `${formatTime(video.duration - video.currentTime)}`;
 }
 function showControls() {
     if (!loadingIndicator.classList.contains('hidden')) {
@@ -1220,8 +1220,8 @@ function renderTracksMenu() {
             check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
             const label = document.createElement('span');
             const displayName = getDisplayName(track, false);
-            // [ORG] = HLS or GitHub original, lazy Wyzie tracks get no suffix until loaded
-            let labelText = (source === 'hls' || source === 'github') ? `${displayName} [ORG]` : displayName;
+            // [CC] = HLS or GitHub original, lazy Wyzie tracks get no suffix until loaded
+            let labelText = (source === 'hls' || source === 'github') ? `${displayName} [CC]` : displayName;
             label.textContent = labelText;
             li.appendChild(check);
             li.appendChild(label);
@@ -1747,7 +1747,6 @@ function initHlsPlayer(url) {
     /* ---- Direct video file (MP4, WebM, etc.) ---- */
     if (isDirectVideoUrl(url)) {
         isHlsJsMode = false;
-        video.removeAttribute('crossorigin');
         showLoader();
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
@@ -1766,7 +1765,6 @@ function initHlsPlayer(url) {
     /* ---- HLS stream (.m3u8) ---- */
     if (Hls.isSupported()) {
         isHlsJsMode = true;
-        video.setAttribute('crossorigin', 'anonymous');
         showLoader();
         const h = new Hls({
             renderTextTracksNatively: true,
@@ -1820,7 +1818,6 @@ function initHlsPlayer(url) {
     }
     else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         isHlsJsMode = false;
-        video.setAttribute('crossorigin', 'anonymous');
         showLoader();
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
