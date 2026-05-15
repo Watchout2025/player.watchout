@@ -201,6 +201,62 @@
             #audio-subtitle-menu-footer { display: none !important; }
             #audio-subtitle-menu-inner  { padding: 0 !important; flex: unset !important; overflow-y: unset !important; }
         }
+
+        /* ---- Mobile fullscreen speed/quality menu (max-width: 999px only) ---- */
+        @media (max-width: 999px) {
+            #speed-quality-menu:not(.hidden) {
+                background: black !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                z-index: 99999 !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+            }
+            #speed-quality-menu-inner {
+                flex: 1;
+                overflow: hidden;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+            }
+            #speed-quality-menu-inner > .flex {
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+            }
+            #speed-tracks-container,
+            #quality-tracks-container {
+                max-height: unset !important;
+                overflow-y: visible !important;
+                border: none;
+                min-height: 0;
+            }
+            #speed-tracks-container #speed-list,
+            #quality-tracks-container #quality-list {
+                max-height: unset !important;
+                overflow-y: auto !important;
+                flex: 1;
+                min-height: 0;
+            }
+            #speed-quality-menu-footer {
+                display: flex !important;
+            }
+        }
+        /* ---- Desktop: restore defaults for speed-quality menu ---- */
+        @media (min-width: 1000px) {
+            #speed-quality-menu-footer { display: none !important; }
+            #speed-quality-menu-inner  { padding: 0 !important; flex: unset !important; overflow-y: unset !important; }
+        }
         #loading-indicator img{width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
@@ -628,23 +684,49 @@
                         </div>
                     </div>
 
-                    <!-- PLAYBACK SPEED -->
-                    <button id="speed-button"
-                            class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none mobile-labeled-btn"
-                            title="Playback speed">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
-                             aria-hidden="true" class="w-6 h-6 md:w-full md:h-full flex-shrink-0"
-                             viewBox="0 0 24 24" data-icon="InternetSpeedMedium">
-                            <path fill="currentColor" fill-rule="evenodd"
-                                  d="M19.06 6.27a9.7 9.7 0 0 0-14.12 0 10.8 10.8 0 0 0 0 14.82L3.5 22.47a12.8 12.8 0 0 1 0-17.59 11.7 11.7 0 0 1 17 0 12.8 12.8 0 0 1 0 17.59l-1.44-1.38a10.8 10.8 0 0 0 0-14.82M15 14a3 3 0 1 1-1.7-2.7l3-3 1.4 1.4-3 3q.3.6.3 1.3"
-                                  clip-rule="evenodd"/>
-                        </svg>
-                        <span class="mobile-btn-label">Speed</span>
-                    </button>
-                    <div id="speed-menu"
-                         class="absolute bottom-12 right-0 w-48 rounded-[0.4rem] shadow-2xl p-3 hidden text-white transition-opacity duration-200"
-                         style="background-color:#262626">
-                        <ul id="speed-list" class="space-y-1 text-sm"></ul>
+                    <!-- SPEED & QUALITY -->
+                    <div class="relative" id="speed-quality-wrapper">
+                        <button id="speed-button"
+                                class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none mobile-labeled-btn"
+                                title="Speed & Quality">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" fill="none"
+                                 aria-hidden="true" class="w-6 h-6 md:w-full md:h-full flex-shrink-0"
+                                 viewBox="0 0 24 24" data-icon="InternetSpeedMedium">
+                                <path fill="currentColor" fill-rule="evenodd"
+                                      d="M19.06 6.27a9.7 9.7 0 0 0-14.12 0 10.8 10.8 0 0 0 0 14.82L3.5 22.47a12.8 12.8 0 0 1 0-17.59 11.7 11.7 0 0 1 17 0 12.8 12.8 0 0 1 0 17.59l-1.44-1.38a10.8 10.8 0 0 0 0-14.82M15 14a3 3 0 1 1-1.7-2.7l3-3 1.4 1.4-3 3q.3.6.3 1.3"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                            <span class="mobile-btn-label">Speed &amp; Quality</span>
+                        </button>
+                        <div id="speed-quality-menu"
+                             class="absolute bottom-12 right-0 w-72 max-w-[85vw] md:w-[450px] rounded-[0.4rem] shadow-2xl p-4 hidden text-white transition-opacity duration-200"
+                             style="background-color:#262626">
+                            <div id="speed-quality-menu-inner">
+                                <div class="flex gap-4">
+                                    <div id="speed-tracks-container"
+                                         class="flex-1 flex flex-col min-h-0 pr-2">
+                                        <h4 class="mb-2 text-gray-200 pb-1 flex-shrink-0" style="font-size:16px;font-weight:700;">
+                                            Speed
+                                        </h4>
+                                        <ul id="speed-list" class="space-y-1 text-sm overflow-y-auto max-h-56"></ul>
+                                    </div>
+                                    <div id="quality-tracks-container"
+                                         class="flex-1 flex flex-col min-h-0 pl-2 border-l border-gray-700">
+                                        <h4 class="mb-2 text-gray-200 pb-1 flex-shrink-0" style="font-size:16px;font-weight:700;">
+                                            Quality
+                                        </h4>
+                                        <ul id="quality-list" class="space-y-1 text-sm overflow-y-auto max-h-56">
+                                            <li class="text-gray-400">Loading…</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Mobile-only footer -->
+                            <div id="speed-quality-menu-footer" style="display:none;position:absolute;width:100%;bottom:0;right:0;background:transparent;justify-content:flex-end;gap:8px;padding:12px 16px;flex-shrink:0;">
+                                <button onclick="toggleSpeedQualityMenu()" style="background:#242424;color:#fff;padding:8px 20px;font-size:14px;font-weight:700;cursor:pointer;border-radius:2px;">Cancel</button>
+                                <button onclick="toggleSpeedQualityMenu()" style="background:white;border:none;color:#000;padding:8px 20px;font-size:14px;font-weight:700;cursor:pointer;border-radius:2px;">Done</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Fullscreen -->
@@ -793,7 +875,6 @@ function handleSkipForward() {
    PLAYBACK‑SPEED UI
    ------------------------------------------------------------------------- */
 const speedButton   = document.getElementById('speed-button');
-const speedMenu     = document.getElementById('speed-menu');
 const speedList     = document.getElementById('speed-list');
 
 const SPEED_OPTIONS = [
@@ -1072,6 +1153,8 @@ function updateFullscreenIcon() {
    ------------------------------------------------------------------------- */
 function toggleAudioSubtitleMenu() {
     const hidden = audioSubtitleMenu.classList.contains('hidden');
+    // Close speed-quality menu if open
+    speedQualityMenu.classList.add('hidden');
     if (hidden) {
         renderTracksMenu();
         audioSubtitleMenu.classList.remove('hidden');
@@ -1090,10 +1173,11 @@ function handleDocumentClick(e) {
         audioSubtitleMenu.classList.add('hidden');
         resetInactivityTimer();
     }
-    if (!speedMenu.classList.contains('hidden') &&
-        !speedMenu.contains(e.target) &&
-        !speedButton.contains(e.target)) {
-        speedMenu.classList.add('hidden');
+    if (!speedQualityMenu.classList.contains('hidden') &&
+        !speedQualityMenu.contains(e.target) &&
+        !speedButton.contains(e.target) &&
+        window.innerWidth >= 1000) {
+        speedQualityMenu.classList.add('hidden');
         resetInactivityTimer();
     }
 }
@@ -1343,37 +1427,115 @@ function handleTrackSelection(type, idx, hlsIdx) {
 }
 
 /* -------------------------------------------------------------------------
-   PLAYBACK‑SPEED LOGIC
+   SPEED & QUALITY COMBINED MENU
    ------------------------------------------------------------------------- */
-function renderSpeedMenu() {
+const speedQualityMenu = document.getElementById('speed-quality-menu');
+const qualityList      = document.getElementById('quality-list');
+
+function renderSpeedList() {
     speedList.innerHTML = '';
     SPEED_OPTIONS.forEach(opt => {
+        const selected = video.playbackRate === opt.value;
         const li = document.createElement('li');
-        li.className = `cursor-pointer hover:opacity-80 p-1 rounded transition text-sm ${video.playbackRate===opt.value?'font-bold text-white':'text-gray-400'}`;
-        li.textContent = opt.label;
-        li.dataset.speed = opt.value;
-        li.addEventListener('click', () => setPlaybackSpeed(opt.value));
+        li.className = `track-selector cursor-pointer flex items-center gap-2 ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
+        const check = document.createElement('span');
+        check.style.cssText = `visibility:${selected ? 'visible' : 'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+        check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
+        const label = document.createElement('span');
+        label.textContent = opt.label;
+        li.appendChild(check);
+        li.appendChild(label);
+        li.addEventListener('click', () => {
+            video.playbackRate = opt.value;
+            renderSpeedList();
+            resetInactivityTimer();
+        });
         speedList.appendChild(li);
     });
 }
-function setPlaybackSpeed(rate) {
-    video.playbackRate = rate;
-    renderSpeedMenu();
-    speedMenu.classList.add('hidden');
-    resetInactivityTimer();
+
+function renderQualityList() {
+    qualityList.innerHTML = '';
+
+    const levels = (isHlsJsMode && hlsInstance) ? hlsInstance.levels : [];
+
+    if (!levels.length) {
+        qualityList.innerHTML = '<li class="text-gray-400" style="padding:6px 10px;">No quality levels found.</li>';
+        return;
+    }
+
+    const curLevel = isHlsJsMode ? hlsInstance.currentLevel : -1;
+
+    // Auto option
+    const autoSelected = isHlsJsMode && hlsInstance.autoLevelEnabled;
+    const autoLi = document.createElement('li');
+    autoLi.className = `track-selector cursor-pointer flex items-center gap-2 ${autoSelected ? 'font-bold text-white' : 'text-gray-400'}`;
+    const autoCheck = document.createElement('span');
+    autoCheck.style.cssText = `visibility:${autoSelected ? 'visible' : 'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+    autoCheck.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
+    const autoLabel = document.createElement('span');
+    autoLabel.textContent = 'Auto';
+    autoLi.appendChild(autoCheck);
+    autoLi.appendChild(autoLabel);
+    autoLi.addEventListener('click', () => {
+        if (isHlsJsMode && hlsInstance) hlsInstance.currentLevel = -1;
+        renderQualityList();
+        resetInactivityTimer();
+    });
+    qualityList.appendChild(autoLi);
+
+    // Sort levels highest → lowest by height (or bandwidth fallback)
+    const sorted = levels
+        .map((l, i) => ({ level: l, index: i }))
+        .sort((a, b) => (b.level.height || b.level.bitrate || 0) - (a.level.height || a.level.bitrate || 0));
+
+    sorted.forEach(({ level, index }) => {
+        const selected = !autoSelected && index === curLevel;
+        const li = document.createElement('li');
+        li.className = `track-selector cursor-pointer flex items-center gap-2 ${selected ? 'font-bold text-white' : 'text-gray-400'}`;
+        const check = document.createElement('span');
+        check.style.cssText = `visibility:${selected ? 'visible' : 'hidden'};flex-shrink:0;display:inline-flex;align-items:center;`;
+        check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.2928 4.29285L22.7071 5.70706L8.70706 19.7071C8.51952 19.8946 8.26517 20 7.99995 20C7.73474 20 7.48038 19.8946 7.29285 19.7071L0.292847 12.7071L1.70706 11.2928L7.99995 17.5857L21.2928 4.29285Z" fill="white"></path></svg>`;
+        const labelEl = document.createElement('span');
+        const res = level.height ? `${level.height}p` : (level.bitrate ? `${Math.round(level.bitrate/1000)}k` : `Level ${index}`);
+        labelEl.textContent = res;
+        li.appendChild(check);
+        li.appendChild(labelEl);
+        li.addEventListener('click', () => {
+            if (isHlsJsMode && hlsInstance) hlsInstance.currentLevel = index;
+            renderQualityList();
+            resetInactivityTimer();
+        });
+        qualityList.appendChild(li);
+    });
 }
-function toggleSpeedMenu() {
-    const hidden = speedMenu.classList.contains('hidden');
+
+function renderSpeedQualityMenu() {
+    renderSpeedList();
+    renderQualityList();
+}
+
+function toggleSpeedQualityMenu() {
+    const hidden = speedQualityMenu.classList.contains('hidden');
+    // Close audio/subtitle menu if open
+    audioSubtitleMenu.classList.add('hidden');
     if (hidden) {
-        renderSpeedMenu();
-        speedMenu.classList.remove('hidden');
+        renderSpeedQualityMenu();
+        speedQualityMenu.classList.remove('hidden');
         clearTimeout(inactivityTimer);
         showControls();
     } else {
-        speedMenu.classList.add('hidden');
+        speedQualityMenu.classList.add('hidden');
         resetInactivityTimer();
     }
 }
+
+function setPlaybackSpeed(rate) {
+    video.playbackRate = rate;
+    renderSpeedList();
+    resetInactivityTimer();
+}
+
 function handleSpeedKeyboard(e) {
     if (e.key === ',' || e.key === '<') {
         e.preventDefault();
@@ -1385,7 +1547,7 @@ function handleSpeedKeyboard(e) {
         if (cur < SPEED_OPTIONS.length-1) setPlaybackSpeed(SPEED_OPTIONS[cur+1].value);
     }
 }
-speedButton.addEventListener('click', e => { e.stopPropagation(); toggleSpeedMenu(); });
+speedButton.addEventListener('click', e => { e.stopPropagation(); toggleSpeedQualityMenu(); });
 document.addEventListener('click', handleDocumentClick);
 document.addEventListener('keydown', handleSpeedKeyboard);
 
@@ -1773,9 +1935,10 @@ function initHlsPlayer(url) {
         hlsInstance = h;
 
         h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
-        h.on(Hls.Events.MANIFEST_PARSED, renderTracksMenu);
+        h.on(Hls.Events.MANIFEST_PARSED, () => { renderTracksMenu(); renderQualityList(); });
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
+        h.on(Hls.Events.LEVEL_SWITCHED, () => { if (!speedQualityMenu.classList.contains('hidden')) renderQualityList(); });
         h.on(Hls.Events.ERROR, (ev, data) => {
             if (data.fatal) {
                 displayError('Fatal HLS error');
