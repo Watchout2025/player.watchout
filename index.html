@@ -987,7 +987,7 @@ function showControls() {
     centerPlayPauseOverlay.classList.add('opacity-100','pointer-events-auto');
 }
 function hideControls() {
-    if (audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden')) {
+    if (audioSubtitleMenu.classList.contains('hidden') && speedQualityMenu.classList.contains('hidden')) {
         bottomOverlay.classList.remove('controls-visible');
         bottomOverlay.classList.add('controls-hidden');
         centerPlayPauseOverlay.classList.remove('opacity-100','pointer-events-auto');
@@ -1007,7 +1007,7 @@ function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     showControls();
     if (!video.paused && !isSeeking && audioSubtitleMenu.classList.contains('hidden') &&
-        speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
+        speedQualityMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
         inactivityTimer = setTimeout(hideControls, INACTIVITY_TIMEOUT);
     }
 }
@@ -1037,7 +1037,7 @@ function toggleMute() {
     resetInactivityTimer();
 }
 function toggleVideoPlayPause() {
-    if (audioSubtitleMenu.classList.contains('hidden') && speedMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
+    if (audioSubtitleMenu.classList.contains('hidden') && speedQualityMenu.classList.contains('hidden') && loadingIndicator.classList.contains('hidden')) {
         if (video.paused || video.ended) {
             video.play().catch(e => displayError('Play failed: ' + e.message));
         } else {
