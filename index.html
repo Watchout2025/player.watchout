@@ -906,9 +906,6 @@ let lastKnownVolume   = 0.5;
 let currentMouseMoveHandler = null;
 let currentTouchMoveHandler = null;
 
-/* subtitle autoplay */
-let _subtitleAutoplayed = false;
-
 /* resume‑progress */
 let videoStorageKey   = null;
 let hasRestoredPosition = false;
@@ -1336,20 +1333,7 @@ function renderTracksMenu() {
         }
     }
 }
-function autoplayFirstSubtitle() {
-    if (_subtitleAutoplayed) return;
-    const subs = Array.from(video.textTracks)
-        .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-    if (!subs.length) return;
-    // Don't override if something is already showing
-    if (subs.some(t => t.mode === 'showing')) { _subtitleAutoplayed = true; return; }
-    _subtitleAutoplayed = true;
-    // Use handleTrackSelection so HLS-managed tracks are handled correctly
-    const hlsIdx = (isHlsJsMode && hlsInstance) ? 0 : -2;
-    handleTrackSelection('subtitle', 0, hlsIdx);
-}
-
-
+function handleTrackSelection(type, idx, hlsIdx) {
     if (type === 'audio') {
         if (isHlsJsMode && hlsInstance) hlsInstance.audioTrack = idx;
         else if (video.audioTracks) {
@@ -1915,7 +1899,6 @@ function initHlsPlayer(url) {
     // Remove injected subtitle tracks from previous episode
     Array.from(video.querySelectorAll('track[data-github], track[data-wyzie]')).forEach(t => t.remove());
     errorMessageDiv.classList.add('hidden');
-    _subtitleAutoplayed = false;
 
     // Reset per-episode progress state so the new episode starts fresh.
     hasRestoredPosition = false;
@@ -1952,7 +1935,7 @@ function initHlsPlayer(url) {
         hlsInstance = h;
 
         h.on(Hls.Events.MEDIA_ATTACHED, () => h.loadSource(url));
-        h.on(Hls.Events.MANIFEST_PARSED, () => { renderTracksMenu(); renderQualityList(); autoplayFirstSubtitle(); });
+        h.on(Hls.Events.MANIFEST_PARSED, () => { renderTracksMenu(); renderQualityList(); });
         h.on(Hls.Events.AUDIO_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.SUBTITLE_TRACK_SWITCHED, renderTracksMenu);
         h.on(Hls.Events.LEVEL_SWITCHED, () => { if (!speedQualityMenu.classList.contains('hidden')) renderQualityList(); });
@@ -2271,7 +2254,6 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
 
             // Re-render the subtitle menu so new tracks appear
             renderTracksMenu();
-            autoplayFirstSubtitle();
         };
 
         if (video.readyState >= 1) {
@@ -2368,7 +2350,6 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
             // Re-render menu so Wyzie tracks appear immediately after GitHub tracks
             _wyzieLoading = false;
             renderTracksMenu();
-            autoplayFirstSubtitle();
         };
 
         if (video.readyState >= 1) {
