@@ -729,8 +729,8 @@
                         </div>
                     </div>
                     <!-- Video Fit Toggle -->
-                    <button id="fit-buttom" class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 472 384"><path fill="#fff" d="M384 192v107H277v-43h64v-64h43zm-256-64v64H85V85h107v43h-64zM427 0q17 0 29.5 12.5T469 43v298q0 18-12.5 30.5T427 384H43q-18 0-30.5-12.5T0 341V43q0-18 12.5-30.5T43 0h384zm0 342V42H43v300h384z"></path></svg>
+                    <button id="fit-button" title="Video Fit" class="bottom-control-button text-white flex items-center justify-center md:h-9 md:w-9 flex-shrink-0 cursor-pointer focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="text-white w-6 h-6 md:w-full md:h-full" viewBox="0 0 472 384"><path fill="currentColor" d="M384 192v107H277v-43h64v-64h43zm-256-64v64H85V85h107v43h-64zM427 0q17 0 29.5 12.5T469 43v298q0 18-12.5 30.5T427 384H43q-18 0-30.5-12.5T0 341V43q0-18 12.5-30.5T43 0h384zm0 342V42H43v300h384z"></path></svg>
                     </button>
 
                     <!-- Fullscreen -->
@@ -2425,6 +2425,51 @@ async function submitIssue() {
   } finally {
     submitBtn.disabled = issueTypeSelect.value === '';
   }
+}
+
+// Video Fit Toggle
+const fitModes = ['object-cover', 'object-contain', 'object-fill'];
+const fitLabels = { 'object-cover': 'Cover', 'object-contain': 'Contain', 'object-fill': 'Fill' };
+let fitIndex = 0; // starts at cover (matches current class)
+
+const fitButton = document.getElementById('fit-button');
+
+const svgClass = `class="text-white w-6 h-6 md:w-full md:h-full"`;
+function updateFitIcon(mode) {
+  if (mode === 'object-cover') {
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 472 384"><path fill="currentColor" d="M384 192v107H277v-43h64v-64h43zm-256-64v64H85V85h107v43h-64zM427 0q17 0 29.5 12.5T469 43v298q0 18-12.5 30.5T427 384H43q-18 0-30.5-12.5T0 341V43q0-18 12.5-30.5T43 0h384zm0 342V42H43v300h384z"></path></svg>`;
+  } else if (mode === 'object-contain') {
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3zm2 2v14h14V5zm3 3h8v8H8zm2 2v4h4v-4z"/></svg>`;
+  } else {
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3zm2 2v14h14V5z"/></svg>`;
+  }
+}
+
+fitButton.addEventListener('click', () => {
+  // Remove current fit class
+  video.classList.remove(fitModes[fitIndex]);
+  // Advance to next
+  fitIndex = (fitIndex + 1) % fitModes.length;
+  const newMode = fitModes[fitIndex];
+  video.classList.add(newMode);
+  updateFitIcon(newMode);
+
+  // Show toast
+  showToast(`Fit: ${fitLabels[newMode]}`);
+});
+
+function showToast(msg) {
+  let toast = document.getElementById('fit-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'fit-toast';
+    toast.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity 0.3s;';
+    document.getElementById('video-container').appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.style.opacity = '0', 1500);
 }
 </script>
 </body>
