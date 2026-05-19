@@ -2437,11 +2437,14 @@ const fitButton = document.getElementById('fit-button');
 const svgClass = `class="text-white w-6 h-6 md:w-full md:h-full"`;
 function updateFitIcon(mode) {
   if (mode === 'object-cover') {
-    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 472 384"><path fill="currentColor" d="M384 192v107H277v-43h64v-64h43zm-256-64v64H85V85h107v43h-64zM427 0q17 0 29.5 12.5T469 43v298q0 18-12.5 30.5T427 384H43q-18 0-30.5-12.5T0 341V43q0-18 12.5-30.5T43 0h384zm0 342V42H43v300h384z"></path></svg>`;
+    // Cover: outward arrows on a rectangle
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 16"><path fill="currentColor" d="M0 0h5v2H2v3H0zm19 0h5v5h-2V2h-3zM0 11h2v3h3v2H0zm22 3h-3v2h5v-5h-2zM1 1h22v14H1z" fill-rule="evenodd" clip-rule="evenodd"/></svg>`;
   } else if (mode === 'object-contain') {
-    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3zm2 2v14h14V5zm3 3h8v8H8zm2 2v4h4v-4z"/></svg>`;
+    // Contain: inward arrows on a rectangle
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 16"><path fill="currentColor" d="M0 0h5v2H2v3H0zm19 0h5v5h-2V2h-3zM0 11h2v3h3v2H0zm22 3h-3v2h5v-5h-2zM7 4h10v8H7z"/></svg>`;
   } else {
-    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3zm2 2v14h14V5z"/></svg>`;
+    // Fill: solid filled rectangle
+    fitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" ${svgClass} viewBox="0 0 24 16"><rect x="0" y="0" width="24" height="16" fill="currentColor"/></svg>`;
   }
 }
 
@@ -2452,7 +2455,6 @@ fitButton.addEventListener('click', () => {
   fitIndex = (fitIndex + 1) % fitModes.length;
   const newMode = fitModes[fitIndex];
   video.classList.add(newMode);
-  updateFitIcon(newMode);
 
   // Show toast
   showToast(`Fit: ${fitLabels[newMode]}`);
