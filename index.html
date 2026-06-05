@@ -2348,7 +2348,7 @@ async function loadSubtitlesFromWyzie(type, id, season, episode) {
     renderTracksMenu(); // immediately show loading state in menu if already open
     try {
         // Build query URL — metadata only, SRT files fetched lazily on selection
-        let apiUrl = `${WYZIE_API}?id=${id}&key=${WYZIE_KEY}`;
+        let apiUrl = `${WYZIE_API}?id=${id}`;
         if (type === 'tv') {
             apiUrl += `&season=${season}&episode=${episode}`;
         }
