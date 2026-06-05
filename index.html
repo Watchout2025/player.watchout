@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2189,85 +2190,120 @@ function _revokeAllSubtitleBlobs() {
 }
 
 async function loadSubtitlesFromGithub(type, id, season, episode) {
-    let jsonPath;
-    if (type === 'movie') {
-        jsonPath = `${GITHUB_RAW}/sub/movie/${id}/subtitles.json`;
-    } else {
-        jsonPath = `${GITHUB_RAW}/sub/tv/${id}/${season}/${episode}/subtitles.json`;
+    // 2-letter codes derived from languageCodeMap
+    const twoLetterCodes = Object.entries(languageCodeMap)
+        .filter(([code]) => code.length === 2)
+        .map(([code]) => code);
+
+    // Shared inject helper
+    const injectTracks = (validTracks) => {
+        const allBefore = Array.from(video.textTracks)
+            .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+        const showingBefore = allBefore.findIndex(t => t.mode === 'showing');
+
+        Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
+
+        validTracks.forEach(({ label, blobUrl, srclang }) => {
+            const track = document.createElement('track');
+            track.kind    = 'subtitles';
+            track.label   = label;
+            track.srclang = srclang;
+            track.src     = blobUrl;
+            track.setAttribute('data-github', '1');
+            track.default = false;
+            video.appendChild(track);
+        });
+
+        if (showingBefore !== -1) {
+            const allAfter = Array.from(video.textTracks)
+                .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+            allAfter.forEach((t, i) => {
+                t.mode = (i === showingBefore) ? 'showing' : 'disabled';
+            });
+        }
+
+        renderTracksMenu();
+    };
+
+    const scheduleInject = (validTracks) => {
+        if (!validTracks.length) return;
+        if (video.readyState >= 1) {
+            injectTracks(validTracks);
+        } else {
+            video.addEventListener('loadedmetadata', () => injectTracks(validTracks), { once: true });
+        }
+    };
+
+    // ── TV: try Cloudinary base URL first ──────────────────────────────────
+    if (type === 'tv') {
+        try {
+            const seasonEndpoint = `${GITHUB_RAW}/sub/tv/${id}/${season}/`;
+            const baseRes = await fetch(seasonEndpoint, { cache: 'no-store' });
+
+            if (baseRes.ok) {
+                const cloudinaryBase = (await baseRes.text()).trim();
+
+                // Fetch all language VTTs in parallel: {base}{episode}.{langCode}.vtt
+                const trackData = await Promise.all(twoLetterCodes.map(async (code) => {
+                    try {
+                        const url = `${cloudinaryBase}${episode}.${code}.vtt`;
+                        const res = await fetch(url, { cache: 'no-store' });
+                        if (!res.ok) return null;
+                        const vttText = await res.text();
+                        const blob = new Blob([vttText], { type: 'text/vtt;charset=utf-8' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        _subtitleBlobUrls.push(blobUrl);
+                        const label = languageCodeMap[code] || code.toUpperCase();
+                        return { label, blobUrl, srclang: code };
+                    } catch (err) {
+                        return null;
+                    }
+                }));
+
+                const validTracks = trackData.filter(Boolean);
+                if (validTracks.length) {
+                    scheduleInject(validTracks);
+                    return; // Cloudinary succeeded — skip subtitles.json
+                }
+            }
+        } catch (e) {
+            console.warn('Cloudinary subtitle fetch failed, falling back to subtitles.json:', e.message);
+        }
     }
+
+    // ── Fallback: subtitles.json (movies + TV fallback) ────────────────────
+    const jsonPath = type === 'movie'
+        ? `${GITHUB_RAW}/sub/movie/${id}/subtitles.json`
+        : `${GITHUB_RAW}/sub/tv/${id}/${season}/${episode}/subtitles.json`;
 
     try {
         const res = await fetch(jsonPath, { cache: 'no-store' });
-        if (!res.ok) return; // No subtitles yet — silent fail
+        if (!res.ok) return;
 
         const data = await res.json();
         const subs = data.subtitles || {};
         const langs = Object.keys(subs);
         if (!langs.length) return;
 
-        // Fetch all SRT files and convert to VTT blob URLs in parallel
         const trackData = await Promise.all(langs.map(async (lang) => {
             try {
                 const srtRes = await fetch(subs[lang], { cache: 'no-store' });
                 if (!srtRes.ok) return null;
                 const srtText = await srtRes.text();
                 const vttText = srtToVtt(srtText);
-                const blob = new Blob([vttText], { type: "text/vtt;charset=utf-8" });
+                const blob = new Blob([vttText], { type: 'text/vtt;charset=utf-8' });
                 const blobUrl = URL.createObjectURL(blob);
                 _subtitleBlobUrls.push(blobUrl);
-                return { lang, blobUrl };
+                return { label: langLabel(lang), blobUrl, srclang: lang };
             } catch (err) {
                 console.warn(`Failed to load subtitle for ${lang}:`, err.message);
                 return null;
             }
         }));
 
-        const validTracks = trackData.filter(Boolean);
-        if (!validTracks.length) return;
-
-        // Wait until video element is ready to accept tracks
-        const inject = () => {
-            // Remember which textTrack index is currently showing (before we touch the DOM)
-            const allBefore = Array.from(video.textTracks)
-                .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-            const showingBefore = allBefore.findIndex(t => t.mode === 'showing');
-
-            // Remove previously injected GitHub tracks
-            Array.from(video.querySelectorAll('track[data-github]')).forEach(t => t.remove());
-
-            validTracks.forEach(({ lang, blobUrl }) => {
-                const track = document.createElement('track');
-                track.kind    = 'subtitles';
-                track.label   = langLabel(lang);
-                track.srclang = lang;
-                track.src     = blobUrl;
-                track.setAttribute('data-github', '1');
-                track.default = false;
-                video.appendChild(track);
-            });
-
-            // If a subtitle was already showing before GitHub tracks were (re-)injected,
-            // make sure that same track (by position) stays showing and nothing else does.
-            if (showingBefore !== -1) {
-                const allAfter = Array.from(video.textTracks)
-                    .filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-                allAfter.forEach((t, i) => {
-                    t.mode = (i === showingBefore) ? 'showing' : 'disabled';
-                });
-            }
-
-            // Re-render the subtitle menu so new tracks appear
-            renderTracksMenu();
-        };
-
-        if (video.readyState >= 1) {
-            inject();
-        } else {
-            video.addEventListener('loadedmetadata', inject, { once: true });
-        }
+        scheduleInject(trackData.filter(Boolean));
 
     } catch (e) {
-        // Silently ignore — subtitles are optional
         console.warn('Could not load subtitles.json:', e.message);
     }
 }
