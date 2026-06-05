@@ -2237,7 +2237,7 @@ async function loadSubtitlesFromGithub(type, id, season, episode) {
     // ── TV: try Cloudinary base URL first ──────────────────────────────────
     if (type === 'tv') {
         try {
-            const seasonEndpoint = `${GITHUB_RAW}/sub/tv/${id}/${season}/`;
+            const seasonEndpoint = `${GITHUB_RAW}/sub/tv/${id}/${season}/endpoint`;
             const baseRes = await fetch(seasonEndpoint, { cache: 'no-store' });
 
             if (baseRes.ok) {
