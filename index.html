@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2111,12 +2110,13 @@ async function resolveAndPlay() {
 /* -------------------------------------------------------------------------
    TMDB TITLE FETCHING
    ------------------------------------------------------------------------- */
-const TMDB_PROXY = 'https://db.videasy.net/3';
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_KEY  = '61e2290429798c561450eb56b26de19b';
 
 async function fetchAndSetTitle(type, id, season, episode) {
     try {
         if (type === 'movie') {
-            const res = await fetch(`${TMDB_PROXY}/movie/${id}`);
+            const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}`);
             if (!res.ok) return;
             const data = await res.json();
             document.getElementById('title-main-text').textContent = data.title || '';
@@ -2124,8 +2124,8 @@ async function fetchAndSetTitle(type, id, season, episode) {
             document.title = data.title || document.title;
         } else if (type === 'tv') {
             const [seriesRes, epRes] = await Promise.all([
-                fetch(`${TMDB_PROXY}/tv/${id}`),
-                fetch(`${TMDB_PROXY}/tv/${id}/season/${season}/episode/${episode}`)
+                fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}`),
+                fetch(`${TMDB_BASE}/tv/${id}/season/${season}/episode/${episode}?api_key=${TMDB_KEY}`)
             ]);
             const series = seriesRes.ok ? await seriesRes.json() : {};
             const ep     = epRes.ok     ? await epRes.json()     : {};
