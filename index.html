@@ -325,6 +325,45 @@
             #title-display { display: none !important; }
         }
 
+        /* ---- Skip Intro / Recap / Outro Button ---- */
+        #skip-segment-btn {
+            position: absolute;
+            bottom: 90px;
+            right: 24px;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.85);
+            color: #fff;
+            font-family: 'Netflix Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            border-radius: 3px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: background 0.15s ease, transform 0.15s ease;
+            pointer-events: auto;
+        }
+        #skip-segment-btn:hover {
+            background: rgba(255,255,255,0.28);
+            transform: scale(1.03);
+        }
+        #skip-segment-btn.visible {
+            display: flex;
+        }
+        @media (max-width: 600px) {
+            #skip-segment-btn {
+                bottom: 100px;
+                right: 16px;
+                font-size: 13px;
+                padding: 8px 14px;
+            }
+        }
+
         /* ---- Report Issue Modal ---- */
         .report-issue-btn {
           padding: 12px 20px;
@@ -450,6 +489,14 @@
 
     <!-- Left / Right skip hint -->
     <div id="skip-hint" class="text-white"></div>
+
+    <!-- Skip Intro / Recap / Outro -->
+    <button id="skip-segment-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+        </svg>
+        <span id="skip-segment-label">Skip Intro</span>
+    </button>
 
     <!-- Loading spinner -->
     <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
@@ -1680,7 +1727,7 @@ function setupUIControls() {
     video.addEventListener('webkitbeginfullscreen', updateFullscreenIcon);
     video.addEventListener('webkitendfullscreen', updateFullscreenIcon);
 
-    video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); });
+    video.addEventListener('timeupdate', () => { updateProgress(); postTimeUpdateToParent(); checkSegments(); });
     video.addEventListener('progress', updateBufferProgress);
     video.addEventListener('loadedmetadata', () => {
         updateProgress(); updateBufferProgress();
@@ -2070,6 +2117,7 @@ async function playEpisode(seriesId, seasonNumber, episodeNumber) {
             loadSubtitlesFromGithub('tv', seriesId, seasonNumber, episodeNumber);
             loadSubtitlesFromWyzie('tv', seriesId, seasonNumber, episodeNumber);
             fetchAndSetTitle('tv', seriesId, seasonNumber, episodeNumber);
+            loadSegments(seriesId, seasonNumber, episodeNumber);
         } else {
             displayError(`Episode ${episodeNumber} not found in season data.`);
             hideLoader();
@@ -2143,6 +2191,90 @@ async function fetchAndSetTitle(type, id, season, episode) {
         console.warn('fetchAndSetTitle failed:', e.message);
     }
 }
+
+/* -------------------------------------------------------------------------
+   SKIP INTRO / RECAP / OUTRO
+   ------------------------------------------------------------------------- */
+const INTRODB_API = 'https://api.introdb.app/segments';
+
+// Holds current episode's segment data
+let _segments = { intro: null, recap: null, outro: null };
+// Track which segments have been dismissed by the user this episode
+let _dismissedSegments = new Set();
+
+const skipSegmentBtn   = document.getElementById('skip-segment-btn');
+const skipSegmentLabel = document.getElementById('skip-segment-label');
+
+// Called when a new TV episode starts playing
+async function loadSegments(tmdbId, season, episode) {
+    // Reset state for new episode
+    _segments = { intro: null, recap: null, outro: null };
+    _dismissedSegments = new Set();
+    skipSegmentBtn.classList.remove('visible');
+
+    try {
+        // Step 1: get IMDB ID from TMDB
+        const tvRes = await fetch(`${TMDB_BASE}/tv/${tmdbId}/external_ids?api_key=${TMDB_KEY}`);
+        if (!tvRes.ok) return;
+        const tvData = await tvRes.json();
+        const imdbId = tvData.imdb_id;
+        if (!imdbId) return;
+
+        // Step 2: fetch segments from introdb
+        const segRes = await fetch(
+            `${INTRODB_API}?imdb_id=${imdbId}&season=${season}&episode=${episode}`
+        );
+        if (!segRes.ok) return;
+        const seg = await segRes.json();
+
+        _segments.intro = seg.intro  || null;
+        _segments.recap = seg.recap  || null;
+        _segments.outro = seg.outro  || null;
+
+        console.log('[Segments] loaded:', _segments);
+    } catch (e) {
+        console.warn('[Segments] fetch failed:', e.message);
+    }
+}
+
+// Called on every timeupdate — checks if we're inside a segment window
+function checkSegments() {
+    const t = video.currentTime;
+
+    const SEGMENT_DEFS = [
+        { key: 'recap',  label: 'Skip Recap'   },
+        { key: 'intro',  label: 'Skip Intro'   },
+        { key: 'outro',  label: 'Skip Credits' },
+    ];
+
+    for (const { key, label } of SEGMENT_DEFS) {
+        const seg = _segments[key];
+        if (!seg || _dismissedSegments.has(key)) continue;
+
+        if (t >= seg.start_sec && t < seg.end_sec) {
+            skipSegmentLabel.textContent = label;
+            skipSegmentBtn.classList.add('visible');
+            skipSegmentBtn.dataset.activeKey = key;
+            skipSegmentBtn.dataset.endSec    = seg.end_sec;
+            return; // show only the most relevant one
+        }
+    }
+
+    // Not in any segment window — hide
+    if (skipSegmentBtn.classList.contains('visible')) {
+        skipSegmentBtn.classList.remove('visible');
+        delete skipSegmentBtn.dataset.activeKey;
+    }
+}
+
+skipSegmentBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const key    = skipSegmentBtn.dataset.activeKey;
+    const endSec = parseFloat(skipSegmentBtn.dataset.endSec);
+    if (!isNaN(endSec)) video.currentTime = endSec;
+    if (key) _dismissedSegments.add(key);
+    skipSegmentBtn.classList.remove('visible');
+});
 
 /* -------------------------------------------------------------------------
    SUBTITLES FROM GITHUB subtitles.json
