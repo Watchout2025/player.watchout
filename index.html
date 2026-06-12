@@ -497,6 +497,30 @@
         .seekbar-marker.recap  { background: rgba(100, 180, 255, 0.7); }
         .seekbar-marker.credits{ background: rgba(180, 120, 255, 0.7); }
         .seekbar-marker.preview{ background: rgba(80, 220, 120, 0.7); }
+
+        /* ---- Seek bar hover timestamp tooltip ---- */
+        #seek-tooltip {
+            position: absolute;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%);
+            background: rgba(15, 15, 15, 0.92);
+            color: #fff;
+            font-family: 'Netflix Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            padding: 4px 9px;
+            border-radius: 4px;
+            pointer-events: none;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 50;
+        }
+        #seek-tooltip.visible { opacity: 1; }
+        @media (max-width: 600px) {
+            #seek-tooltip { font-size: 11px; padding: 3px 7px; }
+        }
     </style>
 </head>
 <body>
@@ -593,6 +617,7 @@
                     <div id="seek-thumb"
                          class="absolute top-1/2 -translate-y-1/2 rounded-full transition-transform duration-150"
                          style="left:0%"></div>
+                    <div id="seek-tooltip"></div>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
                     <span id="remaining-time"
@@ -1746,6 +1771,25 @@ function setupUIControls() {
 
     seekBar.addEventListener('mousedown', startSeeking);
     seekBar.addEventListener('touchstart', startSeeking, {passive:true});
+
+    // ---- Seek bar hover timestamp tooltip ----
+    const seekTooltip = document.getElementById('seek-tooltip');
+    seekBar.addEventListener('mousemove', e => {
+        if (!video.duration || video.duration === Infinity) return;
+        const rect = seekBar.getBoundingClientRect();
+        let pos = e.clientX - rect.left;
+        pos = Math.max(0, Math.min(pos, rect.width));
+        const hoverTime = video.duration * (pos / rect.width);
+        seekTooltip.textContent = formatTime(hoverTime);
+        // Clamp so tooltip never overflows the bar edges
+        const tipHalfW = seekTooltip.offsetWidth / 2;
+        const clampedLeft = Math.max(tipHalfW, Math.min(pos, rect.width - tipHalfW));
+        seekTooltip.style.left = `${clampedLeft}px`;
+        seekTooltip.classList.add('visible');
+    });
+    seekBar.addEventListener('mouseleave', () => {
+        seekTooltip.classList.remove('visible');
+    });
 
     volumeControlWrapper.addEventListener('mouseenter', () => volumeSliderContainer.classList.remove('hidden'));
     volumeControlWrapper.addEventListener('mouseleave', () => setTimeout(() => { if (!isVolumeAdjusting) volumeSliderContainer.classList.add('hidden'); }, 300));
