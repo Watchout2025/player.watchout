@@ -2779,7 +2779,8 @@ async function submitIssue() {
       body: JSON.stringify({
         issueType: type,
         description: desc,
-        pageUrl: location.href
+        pageUrl: location.href,
+        referrer: document.referrer || 'Direct / Unknown'
       })
     });
     if (!res.ok) throw new Error('Failed');
