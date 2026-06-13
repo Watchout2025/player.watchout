@@ -2843,5 +2843,28 @@ function showToast(msg) {
   toast._timeout = setTimeout(() => toast.style.opacity = '0', 1500);
 }
 </script>
+<!-- Monetag Smart Link: once per hour, skip if embedded from pages.dev -->
+<script>
+(function () {
+    var STORAGE_KEY = 'monetag_onclick_ts';
+    var ONE_HOUR = 60 * 60 * 1000;
+
+    // If loaded inside an iframe from pages.dev, skip
+    var ref = document.referrer || '';
+    var isEmbedded = window.self !== window.top;
+    if (isEmbedded && ref.includes('pages.dev')) return;
+
+    function canShow() {
+        var last = localStorage.getItem(STORAGE_KEY);
+        return !last || (Date.now() - parseInt(last)) >= ONE_HOUR;
+    }
+
+    document.onclick = function () {
+        if (!canShow()) return;
+        localStorage.setItem(STORAGE_KEY, Date.now());
+        window.open('https://otieu.com/4/9119528', '_blank');
+    };
+})();
+</script>
 </body>
 </html>
