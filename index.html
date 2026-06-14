@@ -521,51 +521,6 @@
         @media (max-width: 600px) {
             #seek-tooltip { font-size: 11px; padding: 3px 7px; }
         }
-
-        /* ---- Mobile brightness control (left side) ---- */
-        #brightness-control {
-            position: absolute;
-            left: 18px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            z-index: 25;
-            pointer-events: auto;
-            transition: opacity 0.3s ease;
-        }
-        @media (max-width: 999px) {
-            #brightness-control { display: flex; }
-        }
-        #brightness-icon {
-            color: #fff;
-            width: 22px;
-            height: 22px;
-            margin-bottom: 14px;
-            flex-shrink: 0;
-            pointer-events: none;
-        }
-        #brightness-slider-track {
-            position: relative;
-            width: 4px;
-            height: 130px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 2px;
-            cursor: pointer;
-        }
-        #brightness-slider-fill {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            border-radius: 2px;
-            transition: height 0.05s linear;
-        }
-        @media (min-width: 500px) and (max-width: 999px) {
-            #brightness-slider-track { height: 160px; }
-        }
     </style>
 </head>
 <body>
@@ -575,16 +530,6 @@
 
     <!-- Left / Right skip hint -->
     <div id="skip-hint" class="text-white"></div>
-
-    <!-- Mobile brightness control -->
-    <div id="brightness-control" class="controls-visible" style="transition:opacity 0.5s;">
-        <svg id="brightness-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path fill="none" stroke="currentColor" stroke-width="1.5" d="m4.5 4.5l2 2m11 0l2-2m0 15l-2-2m-11 0l-2 2M12 1v3m0 16v3M1 12h3m16 0h3M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0"/>
-        </svg>
-        <div id="brightness-slider-track">
-            <div id="brightness-slider-fill" style="height:50%"></div>
-        </div>
-    </div>
 
     <!-- Loading spinner -->
     <div id="loading-indicator" style="pointer-events:none;" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30 hidden">
@@ -937,7 +882,6 @@ const video                = document.getElementById('video');
 const videoContainer       = document.getElementById('video-container');
 const errorMessageDiv      = document.getElementById('error-message');
 const skipHint             = document.getElementById('skip-hint');
-const brightnessControl    = document.getElementById('brightness-control');
 
 const topOverlay           = document.getElementById('top-overlay');
 const bottomOverlay        = document.getElementById('bottom-overlay');
@@ -1145,8 +1089,6 @@ function showControls() {
     bottomOverlay.classList.add('controls-visible');
     centerPlayPauseOverlay.classList.remove('opacity-0','pointer-events-none');
     centerPlayPauseOverlay.classList.add('opacity-100','pointer-events-auto');
-    brightnessControl.classList.remove('controls-hidden');
-    brightnessControl.classList.add('controls-visible');
 }
 function hideControls() {
     if (audioSubtitleMenu.classList.contains('hidden') && speedQualityMenu.classList.contains('hidden')) {
@@ -1154,8 +1096,6 @@ function hideControls() {
         bottomOverlay.classList.add('controls-hidden');
         centerPlayPauseOverlay.classList.remove('opacity-100','pointer-events-auto');
         centerPlayPauseOverlay.classList.add('opacity-0','pointer-events-none');
-        brightnessControl.classList.remove('controls-visible');
-        brightnessControl.classList.add('controls-hidden');
     }
 }
 function updateBottomPlayPauseIcon(paused) {
@@ -1995,55 +1935,6 @@ function endVolumeAdjusting() {
 }
 volumeSliderTrack.addEventListener('mousedown', startVolumeAdjusting);
 volumeSliderTrack.addEventListener('touchstart', startVolumeAdjusting, {passive:true});
-
-/* -------------------------------------------------------------------------
-   BRIGHTNESS SLIDER (mobile, left side)
-   ------------------------------------------------------------------------- */
-const brightnessTrack = document.getElementById('brightness-slider-track');
-const brightnessFill  = document.getElementById('brightness-slider-fill');
-let isBrightnessAdjusting = false;
-let currentBrightness = 1; // 1 = 100% (normal)
-
-function applyBrightness(val) {
-    currentBrightness = Math.max(0.2, Math.min(1, val));
-    video.style.filter = `brightness(${currentBrightness})`;
-    brightnessFill.style.height = `${currentBrightness * 100}%`;
-}
-function calculateNewBrightness(clientY) {
-    const rect = brightnessTrack.getBoundingClientRect();
-    let dist = rect.bottom - clientY;
-    dist = Math.max(0, Math.min(dist, rect.height));
-    const pct = dist / rect.height;
-    // Map 0-1 slider position to 0.2-1 brightness range
-    return 0.2 + pct * 0.8;
-}
-function handleBrightnessAdjust(e) {
-    e.preventDefault();
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
-    applyBrightness(calculateNewBrightness(y));
-}
-function startBrightnessAdjusting(e) {
-    isBrightnessAdjusting = true;
-    e.preventDefault();
-    window.addEventListener('mousemove', handleBrightnessAdjust);
-    window.addEventListener('mouseup', endBrightnessAdjusting);
-    window.addEventListener('touchmove', handleBrightnessAdjust, {passive:false});
-    window.addEventListener('touchend', endBrightnessAdjusting);
-    handleBrightnessAdjust(e);
-}
-function endBrightnessAdjusting() {
-    if (!isBrightnessAdjusting) return;
-    isBrightnessAdjusting = false;
-    window.removeEventListener('mousemove', handleBrightnessAdjust);
-    window.removeEventListener('mouseup', endBrightnessAdjusting);
-    window.removeEventListener('touchmove', handleBrightnessAdjust);
-    window.removeEventListener('touchend', endBrightnessAdjusting);
-    resetInactivityTimer();
-}
-brightnessTrack.addEventListener('mousedown', startBrightnessAdjusting);
-brightnessTrack.addEventListener('touchstart', startBrightnessAdjusting, {passive:false});
-// Initialise fill to match default brightness
-applyBrightness(currentBrightness);
 
 /* -------------------------------------------------------------------------
    KEYBOARD SHORTCUTS
