@@ -525,7 +525,7 @@
         /* ---- Mobile brightness control (left side) ---- */
         #brightness-control {
             position: absolute;
-            left: 5vw;
+            left: 18px;
             top: 50%;
             transform: translateY(-50%);
             display: none;
@@ -548,7 +548,7 @@
         }
         #brightness-slider-track {
             position: relative;
-            width: 6px;
+            width: 4px;
             height: 130px;
             background: rgba(255,255,255,0.3);
             border-radius: 2px;
@@ -577,8 +577,10 @@
     <div id="skip-hint" class="text-white"></div>
 
     <!-- Mobile brightness control -->
-    <div id="brightness-control">
-        <svg id="brightness-icon xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24"><path fill="#000000" d="M960 512q93 0 174 35t143 96t96 142t35 175q0 93-35 174t-96 143t-142 96t-175 35q-93 0-174-35t-143-96t-96-142t-35-175q0-93 35-174t96-143t142-96t175-35zm0 768q66 0 124-25t101-68t69-102t26-125q0-66-25-124t-69-101t-102-69t-124-26q-66 0-124 25t-102 69t-69 102t-25 124q0 66 25 124t68 102t102 69t125 25zm64-896H896V0h128v384zM896 1536h128v384H896v-384zm1024-640v128h-384V896h384zM384 1024H0V896h384v128zm123-426L236 326l90-90l272 271l-91 91zm906 724l271 272l-90 90l-272-271l91-91zm0-724l-91-91l272-271l90 90l-271 272zm-906 724l91 91l-272 271l-90-90l271-272z"/></svg>
+    <div id="brightness-control" class="controls-visible" style="transition:opacity 0.5s;">
+        <svg id="brightness-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="1.5" d="m4.5 4.5l2 2m11 0l2-2m0 15l-2-2m-11 0l-2 2M12 1v3m0 16v3M1 12h3m16 0h3M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0"/>
+        </svg>
         <div id="brightness-slider-track">
             <div id="brightness-slider-fill" style="height:50%"></div>
         </div>
@@ -935,6 +937,7 @@ const video                = document.getElementById('video');
 const videoContainer       = document.getElementById('video-container');
 const errorMessageDiv      = document.getElementById('error-message');
 const skipHint             = document.getElementById('skip-hint');
+const brightnessControl    = document.getElementById('brightness-control');
 
 const topOverlay           = document.getElementById('top-overlay');
 const bottomOverlay        = document.getElementById('bottom-overlay');
@@ -1142,6 +1145,8 @@ function showControls() {
     bottomOverlay.classList.add('controls-visible');
     centerPlayPauseOverlay.classList.remove('opacity-0','pointer-events-none');
     centerPlayPauseOverlay.classList.add('opacity-100','pointer-events-auto');
+    brightnessControl.classList.remove('controls-hidden');
+    brightnessControl.classList.add('controls-visible');
 }
 function hideControls() {
     if (audioSubtitleMenu.classList.contains('hidden') && speedQualityMenu.classList.contains('hidden')) {
@@ -1149,6 +1154,8 @@ function hideControls() {
         bottomOverlay.classList.add('controls-hidden');
         centerPlayPauseOverlay.classList.remove('opacity-100','pointer-events-auto');
         centerPlayPauseOverlay.classList.add('opacity-0','pointer-events-none');
+        brightnessControl.classList.remove('controls-visible');
+        brightnessControl.classList.add('controls-hidden');
     }
 }
 function updateBottomPlayPauseIcon(paused) {
