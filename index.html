@@ -2175,10 +2175,10 @@ function showFallbackPlayer(mediaType, ...idParts) {
     let src;
     if (mediaType === 'movie') {
         const [movieId] = idParts;
-        src = `https://player.viseasy.to/movie/${movieId}`;
+        src = `https://player.videasy.to/movie/${movieId}`;
     } else if (mediaType === 'tv') {
         const [seriesId, seasonNumber, episodeNumber] = idParts;
-        src = `https://player.viseasy.to/tv/${seriesId}/${seasonNumber}/${episodeNumber}`;
+        src = `https://player.videasy.to/tv/${seriesId}/${seasonNumber}/${episodeNumber}`;
     } else {
         return;
     }
