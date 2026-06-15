@@ -2137,6 +2137,10 @@ async function playMovie(movieId) {
     try {
         const res = await fetch(githubUrl, { cache: 'no-store' });
         if (!res.ok) {
+            if (res.status === 404) {
+                showFallbackPlayer('movie', movieId);
+                return;
+            }
             displayError(`Could not load movie data (HTTP ${res.status}).`);
             hideLoader();
             return;
@@ -2161,6 +2165,38 @@ async function playMovie(movieId) {
 }
 
 /* -------------------------------------------------------------------------
+   FALLBACK PLAYER  –  used when no stream is available for this title
+   (e.g. GitHub returns 404). Replaces the whole player with a full-screen
+   iframe pointing to an external player.
+   ------------------------------------------------------------------------- */
+function showFallbackPlayer(mediaType, ...idParts) {
+    hideLoader();
+
+    let src;
+    if (mediaType === 'movie') {
+        const [movieId] = idParts;
+        src = `https://player.viseasy.to/movie/${movieId}`;
+    } else if (mediaType === 'tv') {
+        const [seriesId, seasonNumber, episodeNumber] = idParts;
+        src = `https://player.viseasy.to/tv/${seriesId}/${seasonNumber}/${episodeNumber}`;
+    } else {
+        return;
+    }
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;border:none;margin:0;padding:0;';
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+
+    document.body.appendChild(iframe);
+}
+
+/* -------------------------------------------------------------------------
    PLAY EPISODE  –  /tv/{tmdbId}/S{season}/E{episode}
    ------------------------------------------------------------------------- */
 async function playEpisode(seriesId, seasonNumber, episodeNumber) {
@@ -2178,6 +2214,10 @@ async function playEpisode(seriesId, seasonNumber, episodeNumber) {
     try {
         const res = await fetch(githubJsonUrl, { cache: 'no-store' });
         if (!res.ok) {
+            if (res.status === 404) {
+                showFallbackPlayer('tv', seriesId, seasonNumber, episodeNumber);
+                return;
+            }
             displayError(`Could not load season data (HTTP ${res.status}).`);
             hideLoader();
             return;
@@ -2193,8 +2233,7 @@ async function playEpisode(seriesId, seasonNumber, episodeNumber) {
             fetchAndSetTitle('tv', seriesId, seasonNumber, episodeNumber);
             loadIntrodbTimestamps('tv', seriesId, seasonNumber, episodeNumber);
         } else {
-            displayError(`Episode ${episodeNumber} not found in season data.`);
-            hideLoader();
+            showFallbackPlayer('tv', seriesId, seasonNumber, episodeNumber);
         }
     } catch (err) {
         displayError(`Failed to fetch episode data: ${err.message}`);
