@@ -837,6 +837,22 @@
         </div>
     </div>
 
+    <!-- Drag & Drop overlay -->
+    <div id="drag-overlay" style="
+        display:none;position:absolute;inset:0;z-index:99998;
+        background:rgba(0,0,0,0.75);
+        border:3px dashed rgba(255,255,255,0.6);
+        border-radius:8px;
+        box-sizing:border-box;
+        flex-direction:column;align-items:center;justify-content:center;gap:16px;
+        pointer-events:none;
+    ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" viewBox="0 0 24 24">
+            <path fill="white" fill-rule="evenodd" d="M12 2a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-1.414 1.414L13 5.414V15a1 1 0 1 1-2 0V5.414L8.707 7.707A1 1 0 0 1 7.293 6.293l4-4A1 1 0 0 1 12 2ZM4 17a1 1 0 0 1 1 1v1h14v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a1 1 0 0 1 1-1Z" clip-rule="evenodd"/>
+        </svg>
+        <p style="color:#fff;font-size:1.3rem;font-weight:600;margin:0;text-shadow:0 1px 4px rgba(0,0,0,.8);">Drop video to play</p>
+    </div>
+
     <!-- IntroDB skip prompt (intro / recap / credits / preview) -->
     <div id="skip-prompt">
         <button id="skip-prompt-btn" onclick="skipPromptAction()">Skip Intro</button>
@@ -2775,6 +2791,73 @@ function checkIntrodbSegments() {
 /* =========================================================================
    END INTRODB
    ========================================================================= */
+
+
+/* -------------------------------------------------------------------------
+   DRAG & DROP LOCAL VIDEO
+   ------------------------------------------------------------------------- */
+(function () {
+    const ACCEPTED = /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v|ts|mts|m2ts)$/i;
+    const dragOverlay = document.getElementById('drag-overlay');
+    let dragCounter = 0;
+
+    function isVideoFile(item) {
+        if (!item) return false;
+        if (item.kind === 'file') {
+            const f = item.getAsFile();
+            if (!f) return false;
+            if (f.type.startsWith('video/')) return true;
+            return ACCEPTED.test(f.name);
+        }
+        return false;
+    }
+
+    function hasVideoItem(dt) {
+        if (!dt) return false;
+        const items = Array.from(dt.items || []);
+        if (items.length) return items.some(isVideoFile);
+        return Array.from(dt.files || []).some(f => f.type.startsWith('video/') || ACCEPTED.test(f.name));
+    }
+
+    document.addEventListener('dragenter', e => {
+        if (!hasVideoItem(e.dataTransfer)) return;
+        e.preventDefault();
+        dragCounter++;
+        dragOverlay.style.display = 'flex';
+    });
+
+    document.addEventListener('dragleave', () => {
+        dragCounter--;
+        if (dragCounter <= 0) { dragCounter = 0; dragOverlay.style.display = 'none'; }
+    });
+
+    document.addEventListener('dragover', e => {
+        if (!hasVideoItem(e.dataTransfer)) return;
+        e.preventDefault();
+    });
+
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        dragCounter = 0;
+        dragOverlay.style.display = 'none';
+        const files = Array.from(e.dataTransfer.files || []);
+        const videoFile = files.find(f => f.type.startsWith('video/') || ACCEPTED.test(f.name));
+        if (!videoFile) return;
+        if (window._localVideoBlobUrl) { URL.revokeObjectURL(window._localVideoBlobUrl); window._localVideoBlobUrl = null; }
+        const blobUrl = URL.createObjectURL(videoFile);
+        window._localVideoBlobUrl = blobUrl;
+        const iframe = document.getElementById('fallback-iframe');
+        if (iframe) iframe.remove();
+        const name = videoFile.name.replace(/\.[^.]+$/, '');
+        const t1 = document.getElementById('title-main-text');
+        const t2 = document.getElementById('mobile-title-main');
+        if (t1) t1.textContent = name;
+        if (t2) t2.textContent = name;
+        document.title = name;
+        showToast('\u25b6 ' + videoFile.name);
+        initHlsPlayer(blobUrl);
+    });
+})();
 
 window.onload = () => { setupUIControls(); resolveAndPlay(); };
 
