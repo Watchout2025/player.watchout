@@ -2003,11 +2003,12 @@ document.addEventListener('keydown', handleKeyboardShortcuts);
    HLS / DIRECT VIDEO INITIALISATION
    ------------------------------------------------------------------------- */
 function isDirectVideoUrl(url) {
+    if (url && url.startsWith('blob:')) return true;
     try {
         const path = new URL(url).pathname.toLowerCase();
-        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v)(\?|$)/.test(path);
+        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v|ts|mts|m2ts)(\?|$)/.test(path);
     } catch (e) {
-        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v)(\?|$)/.test(url.toLowerCase());
+        return /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v|ts|mts|m2ts)(\?|$)/.test(url.toLowerCase());
     }
 }
 
@@ -2834,6 +2835,8 @@ function checkIntrodbSegments() {
         if (window._localVideoBlobUrl) { URL.revokeObjectURL(window._localVideoBlobUrl); window._localVideoBlobUrl = null; }
         const blobUrl = URL.createObjectURL(videoFile);
         window._localVideoBlobUrl = blobUrl;
+        // Tag the blob URL with the original filename so initHlsPlayer can detect the type
+        window._localVideoBlobName = videoFile.name;
         const iframe = document.getElementById('fallback-iframe');
         if (iframe) iframe.remove();
         const name = videoFile.name.replace(/\.[^.]+$/, '');
