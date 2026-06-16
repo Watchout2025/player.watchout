@@ -524,6 +524,12 @@
     </style>
 </head>
 <body>
+<div id="drag-overlay" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.82);border:4px dashed rgba(255,255,255,0.7);box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:none;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="none" viewBox="0 0 24 24">
+        <path fill="white" fill-rule="evenodd" d="M12 2a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-1.414 1.414L13 5.414V15a1 1 0 1 1-2 0V5.414L8.707 7.707A1 1 0 0 1 7.293 6.293l4-4A1 1 0 0 1 12 2ZM4 17a1 1 0 0 1 1 1v1h14v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a1 1 0 0 1 1-1Z" clip-rule="evenodd"/>
+    </svg>
+    <p style="color:#fff;font-size:1.4rem;font-weight:700;margin:0;letter-spacing:0.02em;text-shadow:0 2px 8px rgba(0,0,0,.9);">Drop video to play</p>
+</div>
 
 <div id="video-container" class="relative">
     <video id="video" class="h-full w-full object-contain" autoplay playsinline style="--cue-bottom:80px;"></video>
@@ -837,21 +843,7 @@
         </div>
     </div>
 
-    <!-- Drag & Drop overlay -->
-    <div id="drag-overlay" style="
-        display:none;position:absolute;inset:0;z-index:99998;
-        background:rgba(0,0,0,0.75);
-        border:3px dashed rgba(255,255,255,0.6);
-        border-radius:8px;
-        box-sizing:border-box;
-        flex-direction:column;align-items:center;justify-content:center;gap:16px;
-        pointer-events:none;
-    ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" viewBox="0 0 24 24">
-            <path fill="white" fill-rule="evenodd" d="M12 2a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-1.414 1.414L13 5.414V15a1 1 0 1 1-2 0V5.414L8.707 7.707A1 1 0 0 1 7.293 6.293l4-4A1 1 0 0 1 12 2ZM4 17a1 1 0 0 1 1 1v1h14v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a1 1 0 0 1 1-1Z" clip-rule="evenodd"/>
-        </svg>
-        <p style="color:#fff;font-size:1.3rem;font-weight:600;margin:0;text-shadow:0 1px 4px rgba(0,0,0,.8);">Drop video to play</p>
-    </div>
+
 
     <!-- IntroDB skip prompt (intro / recap / credits / preview) -->
     <div id="skip-prompt">
@@ -2799,49 +2791,45 @@ function checkIntrodbSegments() {
 (function () {
     const ACCEPTED = /\.(mp4|webm|ogg|ogv|mov|mkv|avi|flv|m4v|ts|mts|m2ts)$/i;
     const dragOverlay = document.getElementById('drag-overlay');
-    let dragCounter = 0;
 
-    function isVideoFile(item) {
-        if (!item) return false;
-        if (item.kind === 'file') {
-            const f = item.getAsFile();
-            if (!f) return false;
-            if (f.type.startsWith('video/')) return true;
-            return ACCEPTED.test(f.name);
-        }
-        return false;
-    }
-
-    function hasVideoItem(dt) {
+    function hasVideoInTransfer(dt) {
         if (!dt) return false;
-        const items = Array.from(dt.items || []);
-        if (items.length) return items.some(isVideoFile);
-        return Array.from(dt.files || []).some(f => f.type.startsWith('video/') || ACCEPTED.test(f.name));
+        // During dragenter/dragover, types is available even before files are accessible
+        const types = Array.from(dt.types || []);
+        return types.includes('Files');
     }
 
-    document.addEventListener('dragenter', e => {
-        if (!hasVideoItem(e.dataTransfer)) return;
+    function getVideoFile(dt) {
+        if (!dt) return null;
+        const files = Array.from(dt.files || []);
+        return files.find(f => f.type.startsWith('video/') || ACCEPTED.test(f.name)) || null;
+    }
+
+    function showOverlay() { dragOverlay.style.display = 'flex'; }
+    function hideOverlay() { dragOverlay.style.display = 'none'; }
+
+    // Use dragenter/dragleave on window to catch all drags reliably
+    window.addEventListener('dragenter', e => {
+        if (!hasVideoInTransfer(e.dataTransfer)) return;
         e.preventDefault();
-        dragCounter++;
-        dragOverlay.style.display = 'flex';
+        showOverlay();
     });
 
-    document.addEventListener('dragleave', () => {
-        dragCounter--;
-        if (dragCounter <= 0) { dragCounter = 0; dragOverlay.style.display = 'none'; }
+    // Only hide when leaving the window entirely (relatedTarget is null)
+    window.addEventListener('dragleave', e => {
+        if (e.relatedTarget === null) hideOverlay();
     });
 
-    document.addEventListener('dragover', e => {
-        if (!hasVideoItem(e.dataTransfer)) return;
+    window.addEventListener('dragover', e => {
+        if (!hasVideoInTransfer(e.dataTransfer)) return;
         e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
     });
 
-    document.addEventListener('drop', e => {
+    window.addEventListener('drop', e => {
         e.preventDefault();
-        dragCounter = 0;
-        dragOverlay.style.display = 'none';
-        const files = Array.from(e.dataTransfer.files || []);
-        const videoFile = files.find(f => f.type.startsWith('video/') || ACCEPTED.test(f.name));
+        hideOverlay();
+        const videoFile = getVideoFile(e.dataTransfer);
         if (!videoFile) return;
         if (window._localVideoBlobUrl) { URL.revokeObjectURL(window._localVideoBlobUrl); window._localVideoBlobUrl = null; }
         const blobUrl = URL.createObjectURL(videoFile);
